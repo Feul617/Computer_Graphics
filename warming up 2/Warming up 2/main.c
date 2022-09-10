@@ -343,7 +343,7 @@ int main()
 			}
 
 		case 'd':
-			list.x[bottom] = 0; list.y[bottom] = 0; list.z[bottom] = 0; list.data[bottom] = 0;
+			list.x[bottom] = 0; list.y[bottom] = 0; list.z[bottom] = 0; list.data[bottom] = -1;
 			bottom++;
 			printf("\n");
 			for (int i = bottom; i < top; i++) {
@@ -390,9 +390,9 @@ int main()
 		case 's':
 			if (onS == 0) {
 				onS = 1;
-				for (int i = bottom; i < top; i++) {
-					list.x_clone[i] = list.x[i]; list.y_clone[i] = list.y[i]; list.z_clone[i] = list.z[i];
-					list.data_clone[i] = list.data[i];
+				for (int i = 0; i < top; i++) {
+					list.x_clone[i] = list.x[i + bottom]; list.y_clone[i] = list.y[i + bottom]; list.z_clone[i] = list.z[i + bottom];
+					list.data_clone[i] = list.data[i + bottom];
 				}
 
 				for (int i = bottom; i < top; i++) {
@@ -416,10 +416,10 @@ int main()
 						}
 					}
 				}
-				c_top = top - bottom;
+				//c_top = (top - 1) - bottom;
 				printf("\n");
-				for (int i = bottom; i <= c_top; i++) {
-					printf("높이 : %d | %d, %d, %d\n", i, list.x_clone[i], list.y_clone[i], list.z_clone[i]);
+				for (int i = bottom; i < top; i++) {
+					printf("높이 : %d | %d, %d, %d\n", i - bottom, list.x_clone[i], list.y_clone[i], list.z_clone[i]);
 				}
 				break;
 			}
