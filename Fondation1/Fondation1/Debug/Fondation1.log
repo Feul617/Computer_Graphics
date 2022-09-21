@@ -1,0 +1,11 @@
+﻿  1.cpp
+D:\한국공대 정리\2학년 2학기 정리\컴퓨터 그래픽스\Computer_Graphics\Fondation1\Fondation1\1.cpp(161,34): warning C4326: 'main'의 반환 형식이 'int'이어야 하는데 'void'입니다.
+D:\한국공대 정리\2학년 2학기 정리\컴퓨터 그래픽스\Computer_Graphics\Fondation1\Fondation1\1.cpp(229,15): warning C4305: '-=': 'double'에서 'GLfloat'(으)로 잘립니다.
+D:\한국공대 정리\2학년 2학기 정리\컴퓨터 그래픽스\Computer_Graphics\Fondation1\Fondation1\1.cpp(230,15): warning C4305: '-=': 'double'에서 'GLfloat'(으)로 잘립니다.
+D:\한국공대 정리\2학년 2학기 정리\컴퓨터 그래픽스\Computer_Graphics\Fondation1\Fondation1\1.cpp(231,15): warning C4305: '+=': 'double'에서 'GLfloat'(으)로 잘립니다.
+D:\한국공대 정리\2학년 2학기 정리\컴퓨터 그래픽스\Computer_Graphics\Fondation1\Fondation1\1.cpp(232,15): warning C4305: '+=': 'double'에서 'GLfloat'(으)로 잘립니다.
+D:\한국공대 정리\2학년 2학기 정리\컴퓨터 그래픽스\Computer_Graphics\Fondation1\Fondation1\1.cpp(235,15): warning C4305: '+=': 'double'에서 'GLfloat'(으)로 잘립니다.
+D:\한국공대 정리\2학년 2학기 정리\컴퓨터 그래픽스\Computer_Graphics\Fondation1\Fondation1\1.cpp(236,15): warning C4305: '+=': 'double'에서 'GLfloat'(으)로 잘립니다.
+D:\한국공대 정리\2학년 2학기 정리\컴퓨터 그래픽스\Computer_Graphics\Fondation1\Fondation1\1.cpp(237,15): warning C4305: '-=': 'double'에서 'GLfloat'(으)로 잘립니다.
+D:\한국공대 정리\2학년 2학기 정리\컴퓨터 그래픽스\Computer_Graphics\Fondation1\Fondation1\1.cpp(238,15): warning C4305: '-=': 'double'에서 'GLfloat'(으)로 잘립니다.
+  Fondation1.vcxproj -> D:\한국공대 정리\2학년 2학기 정리\컴퓨터 그래픽스\Computer_Graphics\Fondation1\Debug\Fondation1.exe
