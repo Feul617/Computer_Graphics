@@ -1,9 +1,10 @@
 #define _CRT_SECURE_NO_WARNINGS
-#define Pro 5
+#define Pro 4
 #include<stdio.h>
 #include<time.h>
 #include<math.h>
-
+#include<windows.h>
+#include<stdlib.h>
 
 #if Pro == 4
 
@@ -274,7 +275,10 @@ int main()
 				bottom--;
 				printf("\n");
 				for (int i = bottom; i < top; i++) {
-					printf("높이 : %d | %d, %d, %d\n", i, list.x[i], list.y[i], list.z[i]);
+					if (list.data[i] == -1) continue;
+
+					else
+						printf("높이 : %d | %d, %d, %d\n", i, list.x[i], list.y[i], list.z[i]);
 				}
 				break;
 			}
