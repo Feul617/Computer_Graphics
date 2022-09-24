@@ -1,4 +1,4 @@
 ﻿  main.cpp
-D:\한국공대 정리\2학년 2학기 정리\컴퓨터 그래픽스\Computer_Graphics\foundation 1-4 1-5\foundation 1-4 1-5\main.cpp(19,2): warning C4091: 'typedef ': 변수를 선언하지 않으면 'RECTAN' 왼쪽은 무시됩니다.
-D:\한국공대 정리\2학년 2학기 정리\컴퓨터 그래픽스\Computer_Graphics\foundation 1-4 1-5\foundation 1-4 1-5\main.cpp(43,34): warning C4326: 'main'의 반환 형식이 'int'이어야 하는데 'void'입니다.
+D:\한국공대 정리\2학년 2학기 정리\컴퓨터 그래픽스\Computer_Graphics\foundation 1-4 1-5\foundation 1-4 1-5\main.cpp(159,2): warning C4091: 'typedef ': 변수를 선언하지 않으면 'RECTAN' 왼쪽은 무시됩니다.
+D:\한국공대 정리\2학년 2학기 정리\컴퓨터 그래픽스\Computer_Graphics\foundation 1-4 1-5\foundation 1-4 1-5\main.cpp(190,34): warning C4326: 'main'의 반환 형식이 'int'이어야 하는데 'void'입니다.
   foundation 1-4 1-5.vcxproj -> D:\한국공대 정리\2학년 2학기 정리\컴퓨터 그래픽스\Computer_Graphics\foundation 1-4 1-5\Debug\foundation 1-4 1-5.exe
