@@ -1,4 +1,4 @@
-#define Pro 4
+#define Pro 5
 #include <iostream>
 #include <gl/glew.h> //--- 필요한 헤더파일 include
 #include <gl/freeglut.h>
@@ -373,9 +373,9 @@ void TimerFunction(int value)
 		}
 
 		for (int i = 0; i <= shapecount; i++) {
-			if (Rectan[i].second_x - Rectan[i].first_x > 1.2f || Rectan[i].second_x - Rectan[i].first_x < 0.f)
+			if (Rectan[i].second_x - Rectan[i].first_x > 0.7f || Rectan[i].second_x - Rectan[i].first_x < 0.f)
 				size_x[i] *= -1;
-			if (Rectan[i].second_y - Rectan[i].first_y > 1.2f || Rectan[i].second_y - Rectan[i].first_y < 0.f)
+			if (Rectan[i].second_y - Rectan[i].first_y > 0.7f || Rectan[i].second_y - Rectan[i].first_y < 0.f)
 				size_y[i] *= -1;
 		}
 	}
