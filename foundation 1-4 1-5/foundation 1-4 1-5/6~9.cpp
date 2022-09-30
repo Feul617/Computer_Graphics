@@ -8,6 +8,8 @@
 #define WIDTH 800
 #define HEIGHT 600
 
+#define PI 3.1415926535897932384626433832795
+
 #if Pro == 6
 
 //변수
@@ -287,6 +289,13 @@ void Keyboard(unsigned char key, int x, int y)
 }
 
 #elif Pro == 7
+//구조체
+typedef struct RECTANGLE {
+	GLfloat x1, x2, y1, y2;
+	int shpaetype;
+};
+
+RECTANGLE Rectan[4];
 
 //변수
 GLchar* vertexsource, * fragmentsource;
@@ -296,16 +305,17 @@ GLfloat rColor = 1.f, bColor = 1.f, gColor = 1.f;
 GLint result;
 GLchar errorLog[512];
 
-GLfloat center_verx[4] = { -0.5f, 0.5f ,-0.5f ,0.5f }, center_very[4] = { 0.5f, 0.5f, -0.5f, -0.5f }; //삼각형 중심 좌표
+GLfloat center_verx[4] = { -0.5f, 0.5f ,-0.5f ,0.5f }, center_very[4] = { 0.2f, 0.2f, -0.8f, -0.8f }; //삼각형 중심 좌표
 GLfloat interval_x = 0.2f, interval_y = 0.3f; //점 사이의 거리
 
-GLfloat move_x[4] = { 0.1f, -0.1f, 0.1f, -0.1f };
-GLfloat move_y[4] = { 0.1f, 0.1f, -0.1f, -0.1f };
+GLfloat move_x[4] = { 0.03f, -0.01f, 0.01f, -0.02f };
+GLfloat move_y[4] = { 0.01f, 0.02f, -0.005f, -0.01f };
 
 GLfloat triShape[4][3][2] = {}; //--- 삼각형 위치 값
 GLfloat colors[4][3] = {};
 
 bool start = false;
+float theta[4] = {0, 0, 0, 0};
 
 //함수
 GLvoid drawScene(GLvoid);
@@ -316,9 +326,9 @@ void make_fragmentShaders();
 void InitBuffer();
 void InitShader();
 void draw_triangle();
-void move_triangle();
 
 void Keyboard(unsigned char key, int x, int y);
+void Timer(int value);
 
 
 void main(int argc, char** argv) { //--- 윈도우 출력하고 콜백함수 설정 { //--- 윈도우 생성하기
@@ -348,7 +358,6 @@ void main(int argc, char** argv) { //--- 윈도우 출력하고 콜백함수 설정 { //--- �
 	glutDisplayFunc(drawScene); // 출력 함수의 지정
 	glutReshapeFunc(Reshape); // 다시 그리기 함수 지정
 	glutKeyboardFunc(Keyboard);
-	move_triangle();
 	glutMainLoop(); // 이벤트 처리 시작 }
 }
 
@@ -499,18 +508,21 @@ void draw_triangle()
 {
 	for (int i = 0; i < 4; i++) {
 
-		triShape[i][0][0] = center_verx[i] + 0.2f; triShape[i][0][1] = center_very[i] - 0.3f;   //오른쪽 점
-		triShape[i][1][0] = center_verx[i] - 0.2f; triShape[i][1][1] = center_very[i] - 0.3f;   //왼쪽 점
-		triShape[i][2][0] = center_verx[i]; triShape[i][2][1] = center_very[i] + 0.3f;	      //위쪽 점
+		triShape[i][0][0] = center_verx[i] + (0.1f * cos(theta[i])); triShape[i][0][1] = center_very[i] + (0.1f * sin(theta[i]));   //오른쪽 점
+		triShape[i][1][0] = center_verx[i] - (0.1f * cos(theta[i])); triShape[i][1][1] = center_very[i] - (0.1f * sin(theta[i]));   //왼쪽 점
+		triShape[i][2][0] = center_verx[i] - (0.6f * sin(theta[i])); triShape[i][2][1] = center_very[i] + (0.6f * cos(theta[i]));	      //위쪽 점
 
-		std::cout << triShape[i][0][0] << " " << triShape[i][0][1] << std::endl;
-		std::cout << triShape[i][1][0] << " " << triShape[i][1][1] << std::endl;
-		std::cout << triShape[i][2][0] << " " << triShape[i][2][1] << std::endl;
-		std::cout << "\n" << std::endl;
+		Rectan[i].x1 = center_verx[i] - 0.1f * cos(theta[i]); Rectan[i].y1 = center_very[i] - 0.1f * sin(theta[i]);
+		Rectan[i].x2 = center_verx[i] + (0.1f * cos(theta[i]) - 0.6f * sin(theta[i])); Rectan[i].y2 = center_very[i] + (0.1f * sin(theta[i]) + 0.6f * cos(theta[i]));
+		Rectan[i].shpaetype = 0;
 
 		if (i < 3)
 			colors[i][i] = 1.f;
 	}
+	std::cout << "\n" << std::endl;
+	std::cout << Rectan[0].x2 << ". " << Rectan[0].y2 << std::endl;
+	std::cout << Rectan[0].x1 << " " << Rectan[0].y1 << std::endl;
+	//std::cout << move_x[0] << std::endl;
 	colors[3][0] = 0.5f; colors[3][1] = 0.5f;
 }
 
@@ -519,32 +531,64 @@ void Keyboard(unsigned char key, int x, int y)
 	switch (key)
 	{
 	case 's':
-		start = true;
-		glutTimerFunc(Timer);
+		start = !start;
+
+		glutTimerFunc(10, Timer, 1);
 		break;
 	}
 	glutPostRedisplay();
 }
 
 
-void move_triangle()
+void Timer(int value)
 {
 	if (start == true) {
 		for (int i = 0; i < 4; i++) {
-			center_verx[i] += move_x[i]; center_very[i] += move_y[i];
-
-			if (triShape[i][0][0] > 1.f || triShape[i][0][0] < -1.f) {
+			
+			if (Rectan[i].x1 < -1.f || Rectan[i].x2 < -1.f) {
 				move_x[i] *= -1;
+				theta[i] = 270 * PI / 180;
+				if (Rectan[i].shpaetype == 1) {
+					center_verx[i] -= 0.1f;
+				}
+				Rectan[i].shpaetype = 1;
 			}
+
+			if (Rectan[i].x2 > 1.f || Rectan[i].x1 > 1.f) {
+				move_x[i] *= -1;
+				theta[i] = 90 * PI / 180;
+				if (Rectan[i].shpaetype == 1) {
+					center_verx[i] += 0.1f;
+				}
+				Rectan[i].shpaetype = 1;
+			}
+
+			if (Rectan[i].y1 < -1.f || Rectan[i].y2 < -1.f) {
+				move_y[i] *= -1;
+				theta[i] = 0;
+				if (Rectan[i].shpaetype == 0) {
+					center_very[i] += 0.2f;
+				}
+				Rectan[i].shpaetype = 0;
+			}
+
+			if (Rectan[i].y2 > 1.f || Rectan[i].y1 > 1.f) {
+				move_y[i] *= -1;
+				theta[i] = 180 * PI / 180;
+				if (Rectan[i].shpaetype == 0) {
+					center_very[i] += 0.2f;
+				}
+				Rectan[i].shpaetype = 0;
+			}
+			center_verx[i] += move_x[i]; center_very[i] += move_y[i];
 		}
 	}
-
-	glutPostRedisplay();
-}
-
-void Timer(int value)
-{
-
+	draw_triangle();
+	glBufferData(GL_ARRAY_BUFFER, 24 * sizeof(GLfloat), triShape, GL_STATIC_DRAW);
+	glutPostRedisplay(); // 화면 재 출력
+	if (!start)
+		return;
+	glutTimerFunc(100, Timer, 1);
 }
 
 #endif
