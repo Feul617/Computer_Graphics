@@ -296,8 +296,11 @@ GLfloat rColor = 1.f, bColor = 1.f, gColor = 1.f;
 GLint result;
 GLchar errorLog[512];
 
-GLfloat center_verx = -0.5f, center_very = 0.5f; //삼각형 중심 좌표
+GLfloat center_verx[4] = { -0.5f, 0.5f ,-0.5f ,0.5f }, center_very[4] = { 0.5f, 0.5f, -0.5f, -0.5f }; //삼각형 중심 좌표
 GLfloat interval_x = 0.2f, interval_y = 0.3f; //점 사이의 거리
+
+GLfloat move_x[4] = { 0.1f, -0.1f, 0.1f, -0.1f };
+GLfloat move_y[4] = { 0.1f, 0.1f, -0.1f, -0.1f };
 
 GLfloat triShape[4][3][2] = {}; //--- 삼각형 위치 값
 GLfloat colors[4][3] = {};
@@ -313,6 +316,7 @@ void make_fragmentShaders();
 void InitBuffer();
 void InitShader();
 void draw_triangle();
+void move_triangle();
 
 void Keyboard(unsigned char key, int x, int y);
 
@@ -344,6 +348,7 @@ void main(int argc, char** argv) { //--- 윈도우 출력하고 콜백함수 설정 { //--- �
 	glutDisplayFunc(drawScene); // 출력 함수의 지정
 	glutReshapeFunc(Reshape); // 다시 그리기 함수 지정
 	glutKeyboardFunc(Keyboard);
+	move_triangle();
 	glutMainLoop(); // 이벤트 처리 시작 }
 }
 
@@ -493,19 +498,16 @@ void InitShader()
 void draw_triangle()
 {
 	for (int i = 0; i < 4; i++) {
-		if (i == 2)
-			center_very *= -1;
 
-		triShape[i][0][0] = center_verx + 0.2f; triShape[i][0][1] = center_very - 0.3f;   //오른쪽 점
-		triShape[i][1][0] = center_verx - 0.2f; triShape[i][1][1] = center_very - 0.3f;   //왼쪽 점
-		triShape[i][2][0] = center_verx; triShape[i][2][1] = center_very + 0.3f;	      //위쪽 점
+		triShape[i][0][0] = center_verx[i] + 0.2f; triShape[i][0][1] = center_very[i] - 0.3f;   //오른쪽 점
+		triShape[i][1][0] = center_verx[i] - 0.2f; triShape[i][1][1] = center_very[i] - 0.3f;   //왼쪽 점
+		triShape[i][2][0] = center_verx[i]; triShape[i][2][1] = center_very[i] + 0.3f;	      //위쪽 점
 
 		std::cout << triShape[i][0][0] << " " << triShape[i][0][1] << std::endl;
 		std::cout << triShape[i][1][0] << " " << triShape[i][1][1] << std::endl;
 		std::cout << triShape[i][2][0] << " " << triShape[i][2][1] << std::endl;
 		std::cout << "\n" << std::endl;
 
-		center_verx *= -1;
 		if (i < 3)
 			colors[i][i] = 1.f;
 	}
@@ -518,21 +520,31 @@ void Keyboard(unsigned char key, int x, int y)
 	{
 	case 's':
 		start = true;
+		glutTimerFunc(Timer);
 		break;
 	}
 	glutPostRedisplay();
 }
 
+
 void move_triangle()
 {
 	if (start == true) {
 		for (int i = 0; i < 4; i++) {
+			center_verx[i] += move_x[i]; center_very[i] += move_y[i];
 
+			if (triShape[i][0][0] > 1.f || triShape[i][0][0] < -1.f) {
+				move_x[i] *= -1;
+			}
 		}
 	}
 
-
 	glutPostRedisplay();
+}
+
+void Timer(int value)
+{
+
 }
 
 #endif
