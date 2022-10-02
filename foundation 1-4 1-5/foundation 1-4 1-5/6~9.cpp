@@ -4,6 +4,7 @@
 #include<gl/freeglut.h>
 #include <gl/freeglut_ext.h>
 #include "file.h"
+#include <random>
 
 #define WIDTH 800
 #define HEIGHT 600
@@ -603,7 +604,7 @@ RECTANGLE Rectan[4];
 
 //변수
 GLchar* vertexsource, * fragmentsource;
-GLuint vertexshader, fragmentshader, vao, vbo[2];
+GLuint vertexshader, fragmentshader, vao[2], vbo[2], ebo;
 GLuint s_program, shaderID;
 GLfloat rColor = 1.f, bColor = 1.f, gColor = 1.f;
 GLint result;
@@ -617,7 +618,8 @@ GLfloat move_y[4] = { 0.01f, 0.02f, -0.005f, -0.01f };
 
 GLfloat triShape[4][3][2] = {}; //--- 삼각형 위치 값
 GLfloat colors[4][3] = {};
-GLfloat Linevertex[4][2] = {};
+GLfloat Linevertex[4][2] = { {-0.4f, 0.4f}, {0.4f, 0.4f}, {-0.4f, -0.4f}, {0.4f, -0.4f}};
+unsigned int rectshape[8] = {0, 1, 0, 2, 1, 3, 2, 3};
 
 bool start = false;
 float theta[4] = { 0, 0, 0, 0 };
@@ -636,7 +638,7 @@ void Keyboard(unsigned char key, int x, int y);
 void Timer(int value);
 
 
-void main(int argc, char** argv) { //--- 윈도우 출력하고 콜백함수 설정 { //--- 윈도우 생성하기
+void main(int argc, char** argv) { //--- 윈도우 출력하고 콜백함수 설정 //--- 윈도우 생성하기
 	glutInit(&argc, argv); // glut 초기화
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA); // 디스플레이 모드 설정
 	glutInitWindowPosition(100, 100); // 윈도우의 위치 지정
@@ -682,9 +684,9 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 	glUseProgram(s_program);
 
 	//--- 사용할 VAO 불러오기
-	glBindVertexArray(vao);
-
+	glBindVertexArray(vao[0]);
 	glEnableVertexAttribArray(0);
+
 
 	//--- 삼각형 그리기
 	for (int i = 0; i < 4; i++) {
@@ -692,6 +694,10 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 		glDrawArrays(GL_TRIANGLES, i * 3, 3);
 	}
 
+	glBindVertexArray(vao[1]);
+	glEnableVertexAttribArray(0);
+
+	glDrawElements(GL_LINES, 8, GL_UNSIGNED_INT, 0);
 	glutSwapBuffers(); //--- 화면에 출력하기
 
 }
@@ -757,11 +763,12 @@ void make_fragmentShader()
 
 void InitBuffer()
 {
-	glGenVertexArrays(1, &vao); //--- VAO 를 지정하고 할당하기
+	glGenVertexArrays(2, vao); //--- VAO 를 지정하고 할당하기
 
-	glBindVertexArray(vao); //--- VAO를 바인드하기
+	glBindVertexArray(vao[0]); //--- VAO를 바인드하기
 
 	glGenBuffers(2, vbo); //--- 2개의 VBO를 지정하고 할당하기
+	glGenBuffers(1, &ebo); //--- 2개의 VBO를 지정하고 할당하기
 
 	//--- 1번째 VBO를 활성화하여 바인드하고, 버텍스 속성 (좌표값)을 저장
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
@@ -773,7 +780,7 @@ void InitBuffer()
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
 	//--- attribute 인덱스 0번을 사용가능하게 함
-	glEnableVertexAttribArray(0);
+	glBindVertexArray(vao[1]);
 
 	////--- 2번째 VBO를 활성화 하여 바인드 하고, 버텍스 속성 (색상)을 저장
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
@@ -781,12 +788,17 @@ void InitBuffer()
 	////--- 변수 colors에서 버텍스 색상을 복사한다.
 	////--- colors 배열의 사이즈: 9 *float 
 	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(GLfloat), Linevertex, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 2, 0);
 
 	////--- 색상값을 attribute 인덱스 1번에 명시한다: 버텍스 당 3*float
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 8 * sizeof(unsigned int), rectshape, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 2, 0);
 
 	////--- attribute 인덱스 1번을 사용 가능하게 함.
-	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(0);
+
 }
 
 void InitShader()
@@ -815,12 +827,12 @@ void draw_triangle()
 {
 	for (int i = 0; i < 4; i++) {
 
-		triShape[i][0][0] = center_verx[i] + (0.1f * cos(theta[i])); triShape[i][0][1] = center_very[i] + (0.1f * sin(theta[i]));   //오른쪽 점
-		triShape[i][1][0] = center_verx[i] - (0.1f * cos(theta[i])); triShape[i][1][1] = center_very[i] - (0.1f * sin(theta[i]));   //왼쪽 점
-		triShape[i][2][0] = center_verx[i] - (0.6f * sin(theta[i])); triShape[i][2][1] = center_very[i] + (0.6f * cos(theta[i]));	      //위쪽 점
+		triShape[i][0][0] = center_verx[i] + (0.05f * cos(theta[i])); triShape[i][0][1] = center_very[i] + (0.05f * sin(theta[i]));   //오른쪽 점
+		triShape[i][1][0] = center_verx[i] - (0.05f * cos(theta[i])); triShape[i][1][1] = center_very[i] - (0.05f * sin(theta[i]));   //왼쪽 점
+		triShape[i][2][0] = center_verx[i] - (0.4f * sin(theta[i])); triShape[i][2][1] = center_very[i] + (0.4f * cos(theta[i]));	      //위쪽 점
 
-		Rectan[i].x1 = center_verx[i] - 0.1f * cos(theta[i]); Rectan[i].y1 = center_very[i] - 0.1f * sin(theta[i]);
-		Rectan[i].x2 = center_verx[i] + (0.1f * cos(theta[i]) - 0.6f * sin(theta[i])); Rectan[i].y2 = center_very[i] + (0.1f * sin(theta[i]) + 0.6f * cos(theta[i]));
+		Rectan[i].x1 = center_verx[i] - 0.05f * cos(theta[i]); Rectan[i].y1 = center_very[i] - 0.05f * sin(theta[i]);
+		Rectan[i].x2 = center_verx[i] + (0.05f * cos(theta[i]) - 0.4f * sin(theta[i])); Rectan[i].y2 = center_very[i] + (0.05f * sin(theta[i]) + 0.4f * cos(theta[i]));
 
 		if (i < 3)
 			colors[i][i] = 1.f;
@@ -855,7 +867,7 @@ void Timer(int value)
 				move_x[i] *= -1;
 				theta[i] = 270 * PI / 180;
 				if (Rectan[i].shpaetype == 0) {
-					center_verx[i] -= 0.6f;
+					center_verx[i] -= 0.4f;
 				}
 				Rectan[i].shpaetype = 2;
 			}
@@ -864,7 +876,7 @@ void Timer(int value)
 				move_x[i] *= -1;
 				theta[i] = 90 * PI / 180;
 				if (Rectan[i].shpaetype == 2) {
-					center_verx[i] += 0.6f;
+					center_verx[i] += 0.4f;
 				}
 				Rectan[i].shpaetype = 0;
 			}
@@ -873,7 +885,7 @@ void Timer(int value)
 				move_y[i] *= -1;
 				theta[i] = 0;
 				if (Rectan[i].shpaetype == 1) {
-					center_very[i] -= 0.6f;
+					center_very[i] -= 0.4f;
 				}
 				Rectan[i].shpaetype = 3;
 			}
@@ -882,14 +894,25 @@ void Timer(int value)
 				move_y[i] *= -1;
 				theta[i] = 180 * PI / 180;
 				if (Rectan[i].shpaetype == 3) {
-					center_very[i] += 0.6f;
+					center_very[i] += 0.4f;
 				}
 				Rectan[i].shpaetype = 1;
 			}
+
+			if (Rectan[i].x2 > Linevertex[0][0] && Rectan[i].x2 < Linevertex[1][0] && (Rectan[i].y2 < Linevertex[0][1] && Rectan[i].y2 > Linevertex[2][1]) ||
+				(Rectan[i].x1 > Linevertex[0][0] && Rectan[i].x1 < Linevertex[1][0] && (Rectan[i].y1 < Linevertex[0][1] && Rectan[i].y1 > Linevertex[2][1]))) {
+
+			}
+
+			std::cout << Linevertex[0][0]<< std::endl;
+
+
+
 			center_verx[i] += move_x[i]; center_very[i] += move_y[i];
 		}
 	}
 	draw_triangle();
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 	glBufferData(GL_ARRAY_BUFFER, 24 * sizeof(GLfloat), triShape, GL_STATIC_DRAW);
 	glutPostRedisplay(); // 화면 재 출력
 	if (!start)
@@ -898,27 +921,28 @@ void Timer(int value)
 }
 
 #elif Pro == 9
-//구조체
-typedef struct RECTANGLE {
-	GLfloat x1, x2, y1, y2;
-	int shpaetype;
-};
 
-RECTANGLE Rectan[4];
+std::random_device rd;
+std::mt19937 gen(rd());
+std::uniform_real_distribution<GLfloat> dis(0, 1);
 
 //변수
 GLchar* vertexsource, * fragmentsource;
 GLuint vertexshader, fragmentshader, vao, vbo;
 GLuint s_program, shaderID;
+
 GLfloat rColor = 1.f, bColor = 1.f, gColor = 1.f;
 GLint result;
 GLchar errorLog[512];
 
-GLfloat Circleshape[2] = {};
-int radius = 0;
+GLfloat Circleshape[300][2] = {};
+GLfloat radius = 0;
 
-bool start = false;
-float theta[4] = { 0, 0, 0, 0 };
+bool start = true;
+int pointcount = 0;
+float theta = 0;
+int radian = 0;
+int dir = 1;
 
 //함수
 GLvoid drawScene(GLvoid);
@@ -930,6 +954,7 @@ void InitBuffer();
 void InitShader();
 
 void Keyboard(unsigned char key, int x, int y);
+void Mouse(int button, int state, int x, int y);
 void Timer(int value);
 
 
@@ -950,10 +975,6 @@ void main(int argc, char** argv) { //--- 윈도우 출력하고 콜백함수 설정 { //--- �
 
 	else
 		std::cout << "GLEW Initialized\n";
-
-	for (int i = 0; i < 4; i++) {
-		Rectan[i].shpaetype = 3;
-	}
 
 	InitShader();
 	InitBuffer();
@@ -983,6 +1004,9 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 	glEnableVertexAttribArray(0);
 
 	//--- 삼각형 그리기
+	glPointSize((5.f));
+	glDrawArrays(GL_POINTS, 0, pointcount);
+	std::cout << pointcount << std::endl;
 
 	glutSwapBuffers(); //--- 화면에 출력하기
 
@@ -1059,7 +1083,7 @@ void InitBuffer()
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
 	//--- triShape 배열의 사이즈: 9 * float
-	glBufferData(GL_ARRAY_BUFFER, 24 * sizeof(GLfloat), Circleshape, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 600 * sizeof(GLfloat), Circleshape, GL_STATIC_DRAW);
 
 	//--- 좌표값을 attribute 인덱스 0번에 명시한다: 버텍스 당 3* float
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
@@ -1107,13 +1131,37 @@ void Keyboard(unsigned char key, int x, int y)
 {
 	switch (key)
 	{
+	case 'q':
+		glutDestroyWindow(0);
+		break;
 	}
 	glutPostRedisplay();
 }
 
 void Draw_Cirlce(GLfloat x, GLfloat y)
 {
-	Circleshape[0] = x; Circleshape[1] = y;
+	for (int i = 0; i < 146; i++) {
+		Circleshape[i][0] = x + radius * cos(theta); Circleshape[i][1] = y + radius * sin(theta) * dir;
+		theta = PI * radian / 180;
+		radius += 0.001f;
+		radian += 10;
+		radian %= 360;
+
+		//std::cout << Circleshape[i][0] << ", " << Circleshape[i][1] << std::endl;
+	}
+
+	x += radius * 2;
+	radian = 90;
+
+	for (int i = 146; i < 300; i++) {
+		theta = PI * radian / 180;
+		Circleshape[i][0] = x + radius * -sin(theta); Circleshape[i][1] = y + radius * -cos(theta) * dir;
+		radius -= 0.001f;
+		radian += 10;
+		radian %= 360;
+	}
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, 600 * sizeof(GLfloat), Circleshape, GL_STATIC_DRAW);
 }
 
 void Mouse(int button, int state, int x, int y)
@@ -1121,23 +1169,47 @@ void Mouse(int button, int state, int x, int y)
 	GLfloat real_x = (GLfloat)(x - (WIDTH / 2)) / (WIDTH / 2);
 	GLfloat real_y = (GLfloat)-(y - (HEIGHT / 2)) / (HEIGHT / 2);
 
+	
+
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-		Draw_Cirlce(real_x, real_y);
+		if (start) {
+			pointcount = 0;
+			theta = 0;
+			radius = 0;
+			radian = 0;
+			for (int i = 0; i < 300; i++) {
+				Circleshape[i][0] = Circleshape[i][1] = 0;
+			}
+			rColor = dis(rd);
+			gColor = dis(rd);
+			bColor = dis(rd);
+			if (rColor < 0.5f)
+				dir *= -1;
+			Draw_Cirlce(real_x, real_y);
+			glutTimerFunc(10, Timer, 1);
+			//start = !start;
+		}
+
+		else if (!start) {
+
+			//start = !start;
+		}
 	}
+	
 
 }
 
 void Timer(int value)
 {
-	if (start == true) {
-
+	if (pointcount < 300) {
+		pointcount++;
+		glutTimerFunc(10, Timer, 1);
 	}
 
-	glBufferData(GL_ARRAY_BUFFER, 24 * sizeof(GLfloat), Circleshape, GL_STATIC_DRAW);
 	glutPostRedisplay(); // 화면 재 출력
 	if (!start)
 		return;
-	glutTimerFunc(100, Timer, 1);
+
 }
 
 #endif
