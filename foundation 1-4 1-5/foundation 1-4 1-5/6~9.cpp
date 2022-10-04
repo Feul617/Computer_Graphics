@@ -1,4 +1,4 @@
-#define Pro 9
+#define Pro 8
 #include <iostream>
 #include <gl/glew.h> //--- 필요한 헤더파일 include
 #include<gl/freeglut.h>
@@ -901,7 +901,41 @@ void Timer(int value)
 
 			if (Rectan[i].x2 > Linevertex[0][0] && Rectan[i].x2 < Linevertex[1][0] && (Rectan[i].y2 < Linevertex[0][1] && Rectan[i].y2 > Linevertex[2][1]) ||
 				(Rectan[i].x1 > Linevertex[0][0] && Rectan[i].x1 < Linevertex[1][0] && (Rectan[i].y1 < Linevertex[0][1] && Rectan[i].y1 > Linevertex[2][1]))) {
+				if (Rectan[i].x2 < Linevertex[1][0] || Rectan[i].x1 < Linevertex[1][0]) {
+					move_x[i] *= -1;
+					theta[i] = 270 * PI / 180;
+					if (Rectan[i].shpaetype == 0) {
+						center_verx[i] -= 0.4f;
+					}
+					Rectan[i].shpaetype = 2;
+				}
 
+				if (Rectan[i].x2 > Linevertex[0][0] || Rectan[i].x1 > Linevertex[0][0]) {
+					move_x[i] *= -1;
+					theta[i] = 90 * PI / 180;
+					if (Rectan[i].shpaetype == 2) {
+						center_verx[i] += 0.4f;
+					}
+					Rectan[i].shpaetype = 0;
+				}
+
+				if (Rectan[i].y2 < Linevertex[0][1] || Rectan[i].y1 < Linevertex[0][1]) {
+					move_y[i] *= -1;
+					theta[i] = 0;
+					if (Rectan[i].shpaetype == 1) {
+						center_very[i] -= 0.4f;
+					}
+					Rectan[i].shpaetype = 3;
+				}
+
+				if (Rectan[i].y2 > Linevertex[2][1] || Rectan[i].y1 > Linevertex[2][1]) {
+					move_y[i] *= -1;
+					theta[i] = 180 * PI / 180;
+					if (Rectan[i].shpaetype == 3) {
+						center_very[i] += 0.4f;
+					}
+					Rectan[i].shpaetype = 1;
+				}
 			}
 
 			std::cout << Linevertex[0][0]<< std::endl;
