@@ -598,6 +598,7 @@ void Timer(int value)
 typedef struct RECTANGLE {
 	GLfloat x1, x2, y1, y2;
 	int shpaetype;
+	int crash;
 };
 
 RECTANGLE Rectan[4];
@@ -613,12 +614,12 @@ GLchar errorLog[512];
 GLfloat center_verx[4] = { -0.5f, 0.5f ,-0.5f ,0.5f }, center_very[4] = { 0.2f, 0.2f, -0.8f, -0.8f }; //삼각형 중심 좌표
 GLfloat interval_x = 0.2f, interval_y = 0.3f; //점 사이의 거리
 
-GLfloat move_x[4] = { 0.03f, -0.01f, 0.01f, -0.02f };
-GLfloat move_y[4] = { 0.01f, 0.02f, -0.005f, -0.01f };
+GLfloat move_x[4] = { 0.05f, -0.05f, 0.07f, -0.04f };
+GLfloat move_y[4] = { 0.07f, 0.06f, -0.05f, -0.05f };
 
 GLfloat triShape[4][3][2] = {}; //--- 삼각형 위치 값
 GLfloat colors[4][3] = {};
-GLfloat Linevertex[4][2] = { {-0.4f, 0.4f}, {0.4f, 0.4f}, {-0.4f, -0.4f}, {0.4f, -0.4f}};
+GLfloat Linevertex[4][2] = { {-0.3f, 0.3f}, {0.3f, 0.3f}, {-0.3f, -0.3f}, {0.3f, -0.3f}};
 unsigned int rectshape[8] = {0, 1, 0, 2, 1, 3, 2, 3};
 
 bool start = false;
@@ -658,6 +659,7 @@ void main(int argc, char** argv) { //--- 윈도우 출력하고 콜백함수 설정 //--- 윈�
 
 	for (int i = 0; i < 4; i++) {
 		Rectan[i].shpaetype = 3;
+		Rectan[i].crash = 0;
 	}
 
 	draw_triangle();
@@ -870,6 +872,7 @@ void Timer(int value)
 					center_verx[i] -= 0.4f;
 				}
 				Rectan[i].shpaetype = 2;
+				Rectan[i].crash = 2;
 			}
 
 			if (Rectan[i].x2 > 1.f || Rectan[i].x1 > 1.f) {
@@ -879,6 +882,7 @@ void Timer(int value)
 					center_verx[i] += 0.4f;
 				}
 				Rectan[i].shpaetype = 0;
+				Rectan[i].crash = 2;
 			}
 
 			if (Rectan[i].y1 < -1.f || Rectan[i].y2 < -1.f) {
@@ -888,6 +892,7 @@ void Timer(int value)
 					center_very[i] -= 0.4f;
 				}
 				Rectan[i].shpaetype = 3;
+				Rectan[i].crash = 1;
 			}
 
 			if (Rectan[i].y2 > 1.f || Rectan[i].y1 > 1.f) {
@@ -897,20 +902,12 @@ void Timer(int value)
 					center_very[i] += 0.4f;
 				}
 				Rectan[i].shpaetype = 1;
+				Rectan[i].crash = 1;
 			}
 
 			if (Rectan[i].x2 > Linevertex[0][0] && Rectan[i].x2 < Linevertex[1][0] && (Rectan[i].y2 < Linevertex[0][1] && Rectan[i].y2 > Linevertex[2][1]) ||
 				(Rectan[i].x1 > Linevertex[0][0] && Rectan[i].x1 < Linevertex[1][0] && (Rectan[i].y1 < Linevertex[0][1] && Rectan[i].y1 > Linevertex[2][1]))) {
-				if (Rectan[i].x2 < Linevertex[1][0] || Rectan[i].x1 < Linevertex[1][0]) {
-					move_x[i] *= -1;
-					theta[i] = 270 * PI / 180;
-					if (Rectan[i].shpaetype == 0) {
-						center_verx[i] -= 0.4f;
-					}
-					Rectan[i].shpaetype = 2;
-				}
-
-				if (Rectan[i].x2 > Linevertex[0][0] || Rectan[i].x1 > Linevertex[0][0]) {
+				if (Rectan[i].shpaetype == 2) {
 					move_x[i] *= -1;
 					theta[i] = 90 * PI / 180;
 					if (Rectan[i].shpaetype == 2) {
@@ -919,16 +916,27 @@ void Timer(int value)
 					Rectan[i].shpaetype = 0;
 				}
 
-				if (Rectan[i].y2 < Linevertex[0][1] || Rectan[i].y1 < Linevertex[0][1]) {
+				else if (Rectan[i].shpaetype == 0) {
+					move_x[i] *= -1;
+					theta[i] = 270 * PI / 180;
+					if (Rectan[i].shpaetype == 0) {
+						center_verx[i] -= 0.4f;
+					}
+					Rectan[i].shpaetype = 2;
+				}
+
+				else if (Rectan[i].shpaetype == 1) {
+
 					move_y[i] *= -1;
 					theta[i] = 0;
 					if (Rectan[i].shpaetype == 1) {
 						center_very[i] -= 0.4f;
 					}
 					Rectan[i].shpaetype = 3;
+					
 				}
 
-				if (Rectan[i].y2 > Linevertex[2][1] || Rectan[i].y1 > Linevertex[2][1]) {
+				else if (Rectan[i].shpaetype == 3) {
 					move_y[i] *= -1;
 					theta[i] = 180 * PI / 180;
 					if (Rectan[i].shpaetype == 3) {
