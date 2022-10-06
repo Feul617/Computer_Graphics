@@ -5,6 +5,7 @@
 #include <gl/freeglut_ext.h>
 #include "file.h"
 #include <random>
+#include <windows.h>
 
 #define WIDTH 800
 #define HEIGHT 600
@@ -22,11 +23,19 @@ GLchar errorLog[512];
 GLfloat point_shape[2] = {};
 GLfloat line_shape[3][2] = {};
 GLfloat middle_line[4][2] = {};
-GLfloat tri_shape[2][3][2] = {};
-GLfloat rect_shape[2][4][2] = {};
-GLfloat penta_shape[2][5][2] = {};
+GLfloat tri_shape[6][2] = {};
+GLfloat rect_shape[9][2] = {};
+GLfloat penta_shape[9][2] = {};
 
 GLfloat colors[4][3] = {};
+
+GLfloat line_move = 0.06f;
+GLfloat triangle_move = -0.06f;
+GLfloat rect_move_x = 0.01f;
+GLfloat rect_move_y = 0.03f;
+GLfloat penta_move_x = 0.03f;
+GLfloat penta_move_y = 0.04f;
+
 
 bool change = false;
 int animation = 0;
@@ -43,9 +52,15 @@ void InitShader();
 //그리기 함수
 void draw_middle_line();
 void draw_line();
+void draw_triangle();
+void draw_rectangle();
+void draw_pentagon();
 
 //움직이기 함수
 void change_line();
+void change_triangle();
+void change_rectangle();
+void change_pentagon();
 
 void Keyboard(unsigned char key, int x, int y);
 void Timer(int value);
@@ -71,6 +86,9 @@ void main(int argc, char** argv) { //--- 윈도우 출력하고 콜백함수 설정 //--- 윈�
 
 	draw_middle_line();
 	draw_line();
+	draw_triangle();
+	draw_rectangle();
+	draw_pentagon();
 
 	InitShader();
 	InitBuffer();
@@ -97,14 +115,51 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 	glBindVertexArray(vao[5]);
 	glEnableVertexAttribArray(0);
 
+
+	glUniform3f(vColorLocation, 0, 0, 0);
 	//--- 삼각형 그리기
 	for (int i = 0; i < 4; i++) {
 		glDrawArrays(GL_LINES, i * 2, 2);
 	}
 
+	glUniform3f(vColorLocation, 0, 0, 1.f);
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	if(animation > 0)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	
 	glBindVertexArray(vao[1]);
 	glEnableVertexAttribArray(0);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	glUniform3f(vColorLocation, 1.f, 1.f, 0);
+	glBindVertexArray(vao[2]);
+	glEnableVertexAttribArray(0);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 6);
+
+
+	glUniform3f(vColorLocation, 0, 1.f, 0);
+	glBindVertexArray(vao[3]);
+	glEnableVertexAttribArray(0);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 9);
+
+	glUniform3f(vColorLocation, 1.f, 0, 0);
+
+	if (animation == 10) {
+		glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+		glPointSize(5);
+	}
+
+	glBindVertexArray(vao[4]);
+	glEnableVertexAttribArray(0);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 9);
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glPointSize(1);
 
 	glutSwapBuffers(); //--- 화면에 출력하기
 
@@ -198,12 +253,12 @@ void InitBuffer()
 
 	glBindVertexArray(vao[3]);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[3]);
-	glBufferData(GL_ARRAY_BUFFER, 16 * sizeof(GLfloat), rect_shape, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 18 * sizeof(GLfloat), rect_shape, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
 	glBindVertexArray(vao[4]);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[4]);
-	glBufferData(GL_ARRAY_BUFFER, 20 * sizeof(GLfloat), penta_shape, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 18 * sizeof(GLfloat), penta_shape, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
 	glBindVertexArray(vao[5]);
@@ -244,7 +299,7 @@ void Keyboard(unsigned char key, int x, int y)
 	case 's':
 		change = !change;
 
-		glutTimerFunc(30, Timer, 1);
+		glutTimerFunc(100, Timer, 1);
 		break;
 	}
 	glutPostRedisplay();
@@ -253,28 +308,40 @@ void Keyboard(unsigned char key, int x, int y)
 void Timer(int value)
 {
 	change_line();
+	change_triangle();
+	change_rectangle();
+	change_pentagon();
 
-	if (change) {
+	if (change)
 		animation += 1;
-	}
-
-	else if (!change) {
-		animation -= 1;
-	}
-
 
 	glutPostRedisplay(); // 화면 재 출력
-	if (animation == 11) {
-		animation = 10;
-		return;
+
+	if (animation == 10) {
+		line_move *= -1;
+		triangle_move *= -1;
+		rect_move_x *= -1;
+		rect_move_y *= -1;
+		penta_move_x *= -1;
+		penta_move_y *= -1;
 	}
 
-	else if (animation == -1) {
+	if (animation == 11)
+		Sleep(700);
+
+	if (animation == 20) {
+		change = !change;
+		line_move *= -1;
+		triangle_move *= -1;
+		rect_move_x *= -1;
+		rect_move_y *= -1;
+		penta_move_x *= -1;
+		penta_move_y *= -1;
 		animation = 0;
 		return;
 	}
 
-	glutTimerFunc(30, Timer, 1);
+	glutTimerFunc(100, Timer, 1);
 }
 
 void draw_middle_line()
@@ -302,26 +369,120 @@ void draw_line()
 
 void draw_triangle()
 {
+	//직각삼각형 2개로 생성
+	//첫번째삼각형 (위)
+	tri_shape[0][0] = 0.2f;  tri_shape[0][1] = 0.8f;  //첫번째 점(왼쪽 상단)
+	tri_shape[1][0] = 0.8f;  tri_shape[1][1] = 0.8f;  //두번째 점(우측 상단)
+	tri_shape[2][0] = 0.2f;  tri_shape[2][1] = 0.2f;  //세번째 점(좌측 하단)
+
+	//두번째 삼각형(아래)
+	tri_shape[3][0] = 0.8f;  tri_shape[3][1] = 0.8f;  //네번째 점(우측 상단) -> 두번째 점과 겹침
+	tri_shape[4][0] = 0.2f;  tri_shape[4][1] = 0.2f;  //다섯번째 점 (좌측 하단) -> 세번째 점과 겹침
+	tri_shape[5][0] = 0.8f;  tri_shape[5][1] = 0.8f;  //여섯번째 점 (우측 하단)
 
 }
 
 void draw_rectangle()
 {
+	//첫번째 삼각형
+	rect_shape[0][0] = -0.5f;  rect_shape[0][1] = -0.4f;  //첫번째 점(오각형의 꼭대기)
+	rect_shape[1][0] = -0.8f;  rect_shape[1][1] = -0.4f;  //두번째 점(오각형의 좌측)
+	rect_shape[2][0] = -0.8f;  rect_shape[2][1] = -0.9f;  //세번쨰 점(오각형의 좌측 하단)
 
+	//두번째 삼각형
+	rect_shape[3][0] = -0.5f;  rect_shape[3][1] = -0.4f;  //네번째 점(첫번째 점과 겹침)
+	rect_shape[4][0] = -0.8f;  rect_shape[4][1] = -0.9f;  //다섯번째 점(세번째 점과 겹침)
+	rect_shape[5][0] = -0.2f;  rect_shape[5][1] = -0.9f;  //여섯번째 점(오각형의 우측 하단)
+
+	//세번째 삼각형
+	rect_shape[6][0] = -0.5f;  rect_shape[6][1] = -0.4f;  //일곱번째 점(첫번째 점과 겹침)
+	rect_shape[7][0] = -0.2f;  rect_shape[7][1] = -0.9f;  //여덟번째 점(여섯번째 점과 겹침)
+	rect_shape[8][0] = -0.2f;  rect_shape[8][1] = -0.4f;  //아홉번째 점(오각형의 우측)
 }
 
 void draw_pentagon()
 {
+	//첫번째 삼각형
+	penta_shape[0][0] = 0.5f;  penta_shape[0][1] = -0.1f;  //첫번째 점(오각형의 꼭대기)
+	penta_shape[1][0] = 0.2f;  penta_shape[1][1] = -0.4f;  //두번째 점(오각형의 좌측)
+	penta_shape[2][0] = 0.3f;  penta_shape[2][1] = -0.9f;  //세번쨰 점(오각형의 좌측 하단)
 
+	//두번째 삼각형
+	penta_shape[3][0] = 0.5f;  penta_shape[3][1] = -0.1f;  //네번째 점(첫번째 점과 겹침)
+	penta_shape[4][0] = 0.3f;  penta_shape[4][1] = -0.9f;  //다섯번째 점(세번째 점과 겹침)
+	penta_shape[5][0] = 0.7f;  penta_shape[5][1] = -0.9f;  //여섯번째 점(오각형의 우측 하단)
+
+	//세번째 삼각형
+	penta_shape[6][0] = 0.5f;  penta_shape[6][1] = -0.1f;  //일곱번째 점(첫번째 점과 겹침)
+	penta_shape[7][0] = 0.7f;  penta_shape[7][1] = -0.9f;  //여덟번째 점(여섯번째 점과 겹침)
+	penta_shape[8][0] = 0.8f;  penta_shape[8][1] = -0.4f;  //아홉번째 점(오각형의 우측)
+
+}
+
+void change_pentagon()
+{
+	penta_shape[0][1] -= penta_move_y;
+	penta_shape[3][1] -= penta_move_y;
+	penta_shape[6][1] -= penta_move_y;
+
+	penta_shape[2][1] += penta_move_y;
+	penta_shape[4][1] += penta_move_y;
+	penta_shape[5][1] += penta_move_y;
+	penta_shape[7][1] += penta_move_y;
+
+	penta_shape[1][0] += penta_move_x;
+	penta_shape[8][0] -= penta_move_x;
+
+	penta_shape[2][0] += penta_move_x / 3 * 2;
+	penta_shape[4][0] += penta_move_x / 3 * 2;
+	penta_shape[5][0] -= penta_move_x / 3 * 2;
+	penta_shape[7][0] -= penta_move_x / 3 * 2;
+
+	penta_shape[1][1] -= penta_move_y / 4;
+	penta_shape[8][1] -= penta_move_y / 4;
+
+	glBindVertexArray(vao[4]);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[4]);
+	glBufferData(GL_ARRAY_BUFFER, 18 * sizeof(GLfloat), penta_shape, GL_STATIC_DRAW);
+	glutPostRedisplay(); // 화면 재 출력
 }
 
 void change_line()
 {
-	if(change && animation < 10)
-		line_shape[2][1] -= 0.06f;
+	line_shape[2][1] -= line_move;
+	
+	glBindVertexArray(vao[1]);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+	glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(GLfloat), line_shape, GL_STATIC_DRAW);
+	glutPostRedisplay(); // 화면 재 출력
+}
 
-	else if(!change && animation > 0)
-		line_shape[2][1] += 0.06f;
+void change_triangle()
+{
+	tri_shape[5][1] += triangle_move;
+
+	glBindVertexArray(vao[2]);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
+	glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(GLfloat), tri_shape, GL_STATIC_DRAW);
+	glutPostRedisplay(); // 화면 재 출력
+}
+
+void change_rectangle()
+{
+	rect_shape[0][1] += rect_move_y;
+	rect_shape[3][1] += rect_move_y;
+	rect_shape[6][1] += rect_move_y;
+
+	rect_shape[2][0] += rect_move_x;
+	rect_shape[4][0] += rect_move_x;
+
+	rect_shape[5][0] -= rect_move_x;
+	rect_shape[7][0] -= rect_move_x;
+
+	glBindVertexArray(vao[3]);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[3]);
+	glBufferData(GL_ARRAY_BUFFER, 18 * sizeof(GLfloat), rect_shape, GL_STATIC_DRAW);
+	glutPostRedisplay(); // 화면 재 출력
 }
 
 
