@@ -9,20 +9,27 @@
 #define WIDTH 800
 #define HEIGHT 600
 
-#define PI 3.1415926535897932384626433832795
-
 #if Pro == 10
 
 //변수
 GLchar* vertexsource, * fragmentsource;
-GLuint vertexshader, fragmentshader, vao[2], vbo[2], ebo;
+GLuint vertexshader, fragmentshader, vao[6], vbo[6];
 GLuint s_program, shaderID;
 GLfloat rColor = 1.f, bColor = 1.f, gColor = 1.f;
 GLint result;
 GLchar errorLog[512];
 
-GLfloat triShape[4][3][2] = {}; //--- 삼각형 위치 값
+GLfloat point_shape[2] = {};
+GLfloat line_shape[3][2] = {};
+GLfloat middle_line[4][2] = {};
+GLfloat tri_shape[2][3][2] = {};
+GLfloat rect_shape[2][4][2] = {};
+GLfloat penta_shape[2][5][2] = {};
+
 GLfloat colors[4][3] = {};
+
+bool change = false;
+int animation = 0;
 
 //함수
 GLvoid drawScene(GLvoid);
@@ -32,7 +39,13 @@ void make_vertexShaders();
 void make_fragmentShaders();
 void InitBuffer();
 void InitShader();
-void draw_triangle();
+
+//그리기 함수
+void draw_middle_line();
+void draw_line();
+
+//움직이기 함수
+void change_line();
 
 void Keyboard(unsigned char key, int x, int y);
 void Timer(int value);
@@ -56,7 +69,8 @@ void main(int argc, char** argv) { //--- 윈도우 출력하고 콜백함수 설정 //--- 윈�
 	else
 		std::cout << "GLEW Initialized\n";
 
-	draw_triangle();
+	draw_middle_line();
+	draw_line();
 
 	InitShader();
 	InitBuffer();
@@ -80,20 +94,18 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 	glUseProgram(s_program);
 
 	//--- 사용할 VAO 불러오기
-	glBindVertexArray(vao[0]);
+	glBindVertexArray(vao[5]);
 	glEnableVertexAttribArray(0);
-
 
 	//--- 삼각형 그리기
 	for (int i = 0; i < 4; i++) {
-		glUniform3f(vColorLocation, colors[i][0], colors[i][1], colors[i][2]);
-		glDrawArrays(GL_TRIANGLES, i * 3, 3);
+		glDrawArrays(GL_LINES, i * 2, 2);
 	}
 
 	glBindVertexArray(vao[1]);
 	glEnableVertexAttribArray(0);
+	glDrawArrays(GL_TRIANGLES, 0, 3);
 
-	glDrawElements(GL_LINES, 8, GL_UNSIGNED_INT, 0);
 	glutSwapBuffers(); //--- 화면에 출력하기
 
 }
@@ -159,38 +171,45 @@ void make_fragmentShader()
 
 void InitBuffer()
 {
-	glGenVertexArrays(2, vao); //--- VAO 를 지정하고 할당하기
+	glGenVertexArrays(6, vao); //--- VAO 를 지정하고 할당하기
+	glGenBuffers(6, vbo); //--- 2개의 VBO를 지정하고 할당하기
 
 	glBindVertexArray(vao[0]); //--- VAO를 바인드하기
-
-	glGenBuffers(2, vbo); //--- 2개의 VBO를 지정하고 할당하기
-	glGenBuffers(1, &ebo); //--- 2개의 VBO를 지정하고 할당하기
 
 	//--- 1번째 VBO를 활성화하여 바인드하고, 버텍스 속성 (좌표값)을 저장
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 
 	//--- triShape 배열의 사이즈: 9 * float
-	glBufferData(GL_ARRAY_BUFFER, 24 * sizeof(GLfloat), triShape, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(GLfloat), point_shape, GL_STATIC_DRAW);
 
 	//--- 좌표값을 attribute 인덱스 0번에 명시한다: 버텍스 당 3* float
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
 	//--- attribute 인덱스 0번을 사용가능하게 함
 	glBindVertexArray(vao[1]);
-
-	////--- 2번째 VBO를 활성화 하여 바인드 하고, 버텍스 속성 (색상)을 저장
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+	glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(GLfloat), line_shape, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
-	////--- 변수 colors에서 버텍스 색상을 복사한다.
-	////--- colors 배열의 사이즈: 9 *float 
-	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(GLfloat), Linevertex, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 2, 0);
+	glBindVertexArray(vao[2]);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
+	glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(GLfloat), tri_shape, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
-	////--- 색상값을 attribute 인덱스 1번에 명시한다: 버텍스 당 3*float
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 8 * sizeof(unsigned int), rectshape, GL_STATIC_DRAW);
+	glBindVertexArray(vao[3]);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[3]);
+	glBufferData(GL_ARRAY_BUFFER, 16 * sizeof(GLfloat), rect_shape, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 2, 0);
+	glBindVertexArray(vao[4]);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[4]);
+	glBufferData(GL_ARRAY_BUFFER, 20 * sizeof(GLfloat), penta_shape, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glBindVertexArray(vao[5]);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[5]);
+	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(GLfloat), middle_line, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
 	////--- attribute 인덱스 1번을 사용 가능하게 함.
 	glEnableVertexAttribArray(0);
@@ -200,7 +219,6 @@ void InitBuffer()
 void InitShader()
 {
 	make_vertexShader(); //--- 버텍스 세이더 만들기
-
 	make_fragmentShader(); //--- 프래그먼트 세이더 만들기
 
 	//-- shader Program
@@ -224,27 +242,86 @@ void Keyboard(unsigned char key, int x, int y)
 	switch (key)
 	{
 	case 's':
-		start = !start;
+		change = !change;
 
-		glutTimerFunc(10, Timer, 1);
+		glutTimerFunc(30, Timer, 1);
 		break;
 	}
 	glutPostRedisplay();
 }
 
-
 void Timer(int value)
 {
-	if (start == true) {
+	change_line();
 
+	if (change) {
+		animation += 1;
 	}
-	draw_triangle();
-	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-	glBufferData(GL_ARRAY_BUFFER, 24 * sizeof(GLfloat), triShape, GL_STATIC_DRAW);
+
+	else if (!change) {
+		animation -= 1;
+	}
+
+
 	glutPostRedisplay(); // 화면 재 출력
-	if (!start)
+	if (animation == 11) {
+		animation = 10;
 		return;
-	glutTimerFunc(100, Timer, 1);
+	}
+
+	else if (animation == -1) {
+		animation = 0;
+		return;
+	}
+
+	glutTimerFunc(30, Timer, 1);
+}
+
+void draw_middle_line()
+{
+	//가로선
+	middle_line[0][0] = -1.f;   middle_line[1][0] = 1.f;  
+	middle_line[0][1] = middle_line[1][1] = 0; 
+
+	//세로선
+	middle_line[2][0] = middle_line[3][0] = 0;
+	middle_line[2][1] = 1.f;  middle_line[3][1] = -1.f;
+}
+
+void draw_point()
+{
+
+}
+
+void draw_line()
+{
+	line_shape[0][0] = -0.8f;  line_shape[0][1] = 0.2f;  //왼쪽 점
+	line_shape[1][0] = -0.2f;  line_shape[1][1] = 0.8f;  //오른쪽 점
+	line_shape[2][0] = -0.2f;  line_shape[2][1] = 0.8f;  //겹쳐있는 점
+}
+
+void draw_triangle()
+{
+
+}
+
+void draw_rectangle()
+{
+
+}
+
+void draw_pentagon()
+{
+
+}
+
+void change_line()
+{
+	if(change && animation < 10)
+		line_shape[2][1] -= 0.06f;
+
+	else if(!change && animation > 0)
+		line_shape[2][1] += 0.06f;
 }
 
 
