@@ -1,4 +1,4 @@
-#define Pro 6
+#define Pro 8
 #include <iostream>
 #include <gl/glew.h> //--- 필요한 헤더파일 include
 #include<gl/freeglut.h>
