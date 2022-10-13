@@ -23,6 +23,9 @@
     <ClInclude Include="file.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="read_obj.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="vertex.glsl">
@@ -31,5 +34,16 @@
     <None Include="fragment.glsl">
       <Filter>리소스 파일</Filter>
     </None>
+    <None Include="vertex_2d.glsl">
+      <Filter>리소스 파일</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Object Include="cube.obj">
+      <Filter>리소스 파일</Filter>
+    </Object>
+    <Object Include="tetrahedron.obj">
+      <Filter>리소스 파일</Filter>
+    </Object>
   </ItemGroup>
 </Project>
