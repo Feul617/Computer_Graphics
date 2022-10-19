@@ -37,22 +37,32 @@ typedef struct READ {
 
 //변수
 GLchar* vertexsource[2], * fragmentsource[2];
-GLuint vertexshader[2], fragmentshader[2], vao[3], vbo[3], ebo[2];
+GLuint vertexshader[2], fragmentshader[2], vao[2], vbo[2], ebo[1];
 GLuint s_program, s_program_plat, shaderID;
 GLfloat rColor = 1.f, bColor = 1.f, gColor = 1.f;
 GLint result;
 GLchar errorLog[512];
 
-//glm::vec3 middle_line[4] = {};
-GLfloat middle_line[4][3] = {};
+GLUquadricObj* qobj;
+
+GLfloat middle_line[6][3] = {};
 
 READ cube;
 READ tetra;
 
-int face_number = 6;
-int face_select = 0;
-bool cube_on = false;
-bool tetra_on = true;
+float x_rotation1 = 0;
+float y_rotation1 = 0;
+float x_rotation2 = 0;
+float y_rotation2 = 0;
+
+bool x_plus1 = false;
+bool y_plus1 = false;
+bool x_minus1 = false;
+bool y_minus1 = false;
+bool x_plus2 = false;
+bool y_plus2 = false;
+bool x_minus2 = false;
+bool y_minus2 = false;
 
 //함수
 GLvoid drawScene(GLvoid);
@@ -63,12 +73,13 @@ void make_fragmentShader();
 void InitBuffer();
 void InitShader();
 
-void ReadObj(FILE* objFile, READ &Read);
+void ReadObj(FILE* objFile, READ& Read);
 
 //그리기 함수
 void draw_middle_line();
 
 void Keyboard(unsigned char key, int x, int y);
+void Timer(int value);
 
 
 void main(int argc, char** argv) { //--- 윈도우 출력하고 콜백함수 설정 //--- 윈도우 생성하기
@@ -114,10 +125,17 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 	//--- 사용할 VAO 불러오기
 	glBindVertexArray(vao[0]);
 	glEnableVertexAttribArray(0);
-	
+
+	mat4 xyz = mat4(1.0f);
+	xyz = rotate(xyz, radians(30.f), vec3(-1.f, 1.f, 0));
+
+	unsigned int xyzLocation = glGetUniformLocation(s_program, "modelTransform");
+	//--- modelTransform 변수에 변환 값 적용하기
+	glUniformMatrix4fv(xyzLocation, 1, GL_FALSE, value_ptr(xyz));
+
 	//중앙선
 	glUniform3f(vColorLocation, 1.f, 0, 0);
-	glDrawArrays(GL_LINES, 0, 4);
+	glDrawArrays(GL_LINES, 0, 6);
 
 
 	//도형 그리기
@@ -125,39 +143,49 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 
 	glUseProgram(s_program);
 	vColorLocation = glGetUniformLocation(s_program, "out_Color");
+
 	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::rotate(model, glm::radians(10.0f), glm::vec3(1.0, 0.0, 0.0));
-	model = glm::rotate(model, glm::radians(10.0f), glm::vec3(0.0, 1.0, 0.0));
-	model = glm::rotate(model, glm::radians(10.0f), glm::vec3(0.0, 0.0, 1.0));
-	
+	mat4 TR = mat4(1.f);  mat4 RT = mat4(1.f); mat4 TR1 = mat4(1.f);  mat4 RT1 = mat4(1.f);
+	TR = translate(model, vec3(0.5f, 0, 0));
+	RT = rotate(model, radians(30.f + x_rotation1), vec3(0.5f, 0, 0));
+	RT = rotate(model, radians(30.f + y_rotation1), vec3(0, 1.f, 0));
+
 	unsigned int modelLocation = glGetUniformLocation(s_program, "modelTransform");
 	//--- modelTransform 변수에 변환 값 적용하기
-	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT * TR * model));
 
-	if (cube_on) {
-		glBindVertexArray(vao[1]);
-		glEnableVertexAttribArray(0);
+	qobj = gluNewQuadric();
+	gluQuadricDrawStyle(qobj, GLU_LINE);// 도형 스타일
+	gluQuadricNormals(qobj, GLU_SMOOTH); //생략 가능
+	gluQuadricOrientation(qobj, GLU_OUTSIDE);// 생략 가능
+	gluSphere(qobj, 0.3, 50, 50);
 
-		for (int i = 0; i < face_number; i++)
-		{
+	
+	//큐브
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	TR1 = translate(model, vec3(-0.5f, 0, 0));
+	RT1 = rotate(model, radians(30.f + x_rotation2), vec3(-0.5f, 1.f, 0));
+	RT1 = rotate(model, radians(30.f + y_rotation2), vec3(-0.5f, 1.f, 0));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT * TR * model));
+
+	glBindVertexArray(vao[1]);
+	glEnableVertexAttribArray(0);
+
+	for (int i = 0; i < 6; i++)
+	{
+
+		if (i == 0)
+			glUniform3f(vColorLocation, 1.f, 0, 0);
+
+		if (i == 2)
 			glUniform3f(vColorLocation, 0, 1.f, 0);
 
-			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * (i + face_select) * 6));
+		if (i == 4)
+			glUniform3f(vColorLocation, 0, 0, 1.f);
 
-		}
-	}
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * i * 6));
 
-	else if (tetra_on) {
-		glBindVertexArray(vao[2]);
-		glEnableVertexAttribArray(0);
-
-		for (int i = 1; i > (face_select / 4) * -1; i--)
-		{
-			glUniform3f(vColorLocation, 0, 1.f, 0);
-
-			glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * (face_select % 4)  * i));
-
-		}
 	}
 
 	glutSwapBuffers(); //--- 화면에 출력하기
@@ -235,7 +263,7 @@ void InitBuffer()
 	glBindVertexArray(vao[0]);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 
-	glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(GLfloat), middle_line, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 18 * sizeof(GLfloat), middle_line, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
 	//정육면체
@@ -261,22 +289,6 @@ void InitBuffer()
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo[0]);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 12 * sizeof(FACE), cube.face, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
-	glEnableVertexAttribArray(0);
-
-	//정사면체
-	fp = fopen("tetrahedron.obj", "rb");
-	ReadObj(fp, tetra);
-
-	glBindVertexArray(vao[2]);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
-	glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(GLfloat), tetra.vertex, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo[1]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 12 * sizeof(int), tetra.face, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
-
-	////--- attribute 인덱스 1번을 사용 가능하게 함.
 	glEnableVertexAttribArray(0);
 }
 
@@ -328,116 +340,24 @@ void Keyboard(unsigned char key, int x, int y)
 {
 	switch (key)
 	{
-	case '1':
-		cube_on = true;
-		tetra_on = false;
-		face_number = 1;
-		face_select = 0;
+	case 'x':
+		x_plus1 != x_plus1;
+		glutTimerFunc(10, Timer, 1);
 		break;
 
-	case '2':
-		cube_on = true;
-		tetra_on = false;
-		face_number = 1;
-		face_select = 1;
+	case 'X':
+		x_minus1 != x_minus1;
+		glutTimerFunc(10, Timer, 1);
 		break;
 
-	case '3':
-		cube_on = true;
-		tetra_on = false;
-		face_number = 1;
-		face_select = 2;
+	case 'y':
+		y_plus1 != y_plus1;
+		glutTimerFunc(10, Timer, 1);
 		break;
 
-	case '4':
-		cube_on = true;
-		tetra_on = false;
-		face_number = 1;
-		face_select = 3;
-		break;
-
-	case '5':
-		cube_on = true;
-		tetra_on = false;
-		face_number = 1;
-		face_select = 4;
-		break;
-
-	case '6':
-		cube_on = true;
-		tetra_on = false;
-		face_number = 1;
-		face_select = 5;
-		break;
-
-	case 'a':
-		cube_on = true;
-		tetra_on = false;
-		face_number = 2;
-		face_select = 2;
-		break;
-
-	case 'b':
-		cube_on = true;
-		tetra_on = false;
-		face_number = 2;
-		face_select = 4;
-		break;
-
-	case 'c':
-		cube_on = true;
-		tetra_on = false;
-		face_number = 2;
-		face_select = 0;
-		break;
-
-	case '7':
-		cube_on = false;
-		tetra_on = true;
-		face_number = 1;
-		face_select = 0;
-		break;
-
-	case '8':
-		cube_on = false;
-		tetra_on = true;
-		face_number = 1;
-		face_select = 1;
-		break;
-
-	case '9':
-		cube_on = false;
-		tetra_on = true;
-		face_number = 1;
-		face_select = 2;
-		break;
-
-	case '0':
-		cube_on = false;
-		tetra_on = true;
-		face_number = 1;
-		face_select = 3;
-		break;
-
-	case 'e':
-		cube_on = false;
-		tetra_on = true;
-		face_number = 2;
-		face_select = 5;
-		break;
-
-	case 'f':
-		cube_on = false;
-		tetra_on = true;
-		face_number = 2;
-		face_select = 6;
-		break;
-
-	case 'g':
-		cube_on = false;
-		tetra_on = true;
-		face_number = 2;
-		face_select = 7;
+	case 'Y':
+		y_minus1 != y_minus1;
+		glutTimerFunc(10, Timer, 1);
 		break;
 
 	case 'q':
@@ -458,22 +378,52 @@ void Keyboard(unsigned char key, int x, int y)
 	glutPostRedisplay();
 }
 
+void Timer(int value)
+{
+	if (x_plus1) {
+		x_rotation1 += 1;
+	}
+
+	if (y_plus1) {
+		y_rotation1 += 1;
+	}
+
+	if (x_minus1) {
+		x_rotation1 -= 1;
+	}
+
+	if (y_minus1) {
+		y_rotation1 -= 1;
+	}
+
+	glBindVertexArray(vao[1]);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(vec3), cube.vertex, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo[0]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 12 * sizeof(FACE), cube.face, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+	glEnableVertexAttribArray(0);
+
+	glutTimerFunc(10, Timer, 1);
+
+	glutPostRedisplay();
+}
+
 void draw_middle_line()
 {
-	//middle_line[0] = {1.f, 0, 0};  //오른쪽 점
-	//middle_line[1] = {-1.f, 0, 0 };  //왼쪽 점
-	//middle_line[2] = { 0, 1.f, 0 };  //위쪽 점
-	//middle_line[3] = { 0, -1.f, 0 };  //아래쪽 점
-	//std::cout << "선" << std::endl;
 
 	middle_line[0][0] = 1.f;  middle_line[0][1] = 0;  middle_line[0][2] = 0;
 	middle_line[1][0] = -1.f;  middle_line[1][1] = 0;  middle_line[1][2] = 0;
 	middle_line[2][0] = 0;  middle_line[2][1] = 1.f;  middle_line[2][2] = 0;
 	middle_line[3][0] = 0;  middle_line[3][1] = -1.f;  middle_line[3][2] = 0;
+	middle_line[4][0] = 0;  middle_line[4][1] = 0;  middle_line[4][2] = 1.f;
+	middle_line[5][0] = 0;  middle_line[5][1] = 0;  middle_line[5][2] = -1.f;
 
 }
 
-void ReadObj(FILE* objFile, READ &Read)
+void ReadObj(FILE* objFile, READ& Read)
 {
 	//--- 1. 전체 버텍스 개수 및 삼각형 개수 세기
 	char count[100];
@@ -500,8 +450,7 @@ void ReadObj(FILE* objFile, READ &Read)
 				&Read.vertex[vertIndex].x, &Read.vertex[vertIndex].y,
 				&Read.vertex[vertIndex].z);
 			vertIndex++;
-		}
-		else if (count[0] == 'f' && count[1] == '\0') {
+		} else if (count[0] == 'f' && count[1] == '\0') {
 			fscanf(objFile, "%d %d %d",
 				&Read.face[faceIndex].a, &Read.face[faceIndex].b, &Read.face[faceIndex].c);
 			Read.face[faceIndex].a--; Read.face[faceIndex].b--; Read.face[faceIndex].c--;

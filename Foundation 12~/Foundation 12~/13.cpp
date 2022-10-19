@@ -7,9 +7,12 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
-#include <gl/glm/glm.hpp>
-#include <gl/glm/ext.hpp>
-#include <gl/glm/gtc/matrix_transform.hpp>
+//#include <gl/glm/glm.hpp>
+//#include <gl/glm/ext.hpp>
+//#include <gl/glm/gtc/matrix_transform.hpp>
+#include <glm/glm/glm.hpp>
+#include <glm/glm/ext.hpp>
+#include <glm/glm/gtc/matrix_transform.hpp>
 
 using namespace glm;
 using namespace std;
@@ -158,7 +161,15 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 
 		for (int i = 0; i < 6; i++)
 		{
-			glUniform3f(vColorLocation, dis(rd), dis(rd), dis(rd));
+
+			if(i == 0)
+				glUniform3f(vColorLocation, 1.f, 0, 0);
+
+			if(i == 2)
+				glUniform3f(vColorLocation, 0, 1.f, 0);
+
+			if(i == 4)
+				glUniform3f(vColorLocation, 0, 0, 1.f);
 
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * i * 6));
 
@@ -171,7 +182,20 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 
 		for (int i = 0; i < 6; i++)
 		{
-			glUniform3f(vColorLocation, dis(rd), dis(rd), dis(rd));
+			if (i == 0)
+				glUniform3f(vColorLocation, 1.f, 0, 0);
+
+			if (i == 2)
+				glUniform3f(vColorLocation, 0, 1.f, 0);
+
+			if (i == 3)
+				glUniform3f(vColorLocation, 0, 0, 1.f);
+
+			if (i == 4)
+				glUniform3f(vColorLocation, 0, 1.f, 1.f);
+
+			if (i == 5)
+				glUniform3f(vColorLocation, 1.f, 1.f, 0);
 
 			glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * i * 3));
 
@@ -375,6 +399,8 @@ void Keyboard(unsigned char key, int x, int y)
 		x_on = false;
 		y_on = false;
 		grain = true;
+		x_trans = 0;
+		y_trans = 0;
 		x_rotation = y_rotation = 0;
 		break;
 
