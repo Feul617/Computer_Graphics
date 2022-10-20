@@ -7,12 +7,12 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
-//#include <gl/glm/glm.hpp>
-//#include <gl/glm/ext.hpp>
-//#include <gl/glm/gtc/matrix_transform.hpp>
-#include <glm/glm/glm.hpp>
-#include <glm/glm/ext.hpp>
-#include <glm/glm/gtc/matrix_transform.hpp>
+#include <gl/glm/glm/glm.hpp>
+#include <gl/glm/glm/ext.hpp>
+#include <gl/glm/glm/gtc/matrix_transform.hpp>
+//#include <glm/glm/glm.hpp>
+//#include <glm/glm/ext.hpp>
+//#include <glm/glm/gtc/matrix_transform.hpp>
 
 using namespace glm;
 using namespace std;
@@ -49,6 +49,8 @@ GLfloat middle_line[6][3] = {};
 
 READ cube;
 READ tetra;
+
+bool c_select = true;
 
 float x_rotation1 = 0;
 float y_rotation1 = 0;
@@ -113,14 +115,14 @@ void main(int argc, char** argv) { //--- 윈도우 출력하고 콜백함수 설정 //--- 윈�
 
 GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 1.0f, 1.0f ); // 바탕색을 ‘blue’ 로 지정
 {
-	int vColorLocation = glGetUniformLocation(s_program_plat, "out_Color");
+	int vColorLocation2 = glGetUniformLocation(s_program, "out_Color");
 	//--- 변경된 배경색 설정
 	glClearColor(rColor, gColor, bColor, 1.0f);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	//--- 렌더링 파이프라인에 세이더 불러오기
-	glUseProgram(s_program_plat);
+	glUseProgram(s_program);
 
 	//--- 사용할 VAO 불러오기
 	glBindVertexArray(vao[0]);
@@ -129,63 +131,93 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 	mat4 xyz = mat4(1.0f);
 	xyz = rotate(xyz, radians(30.f), vec3(-1.f, 1.f, 0));
 
-	unsigned int xyzLocation = glGetUniformLocation(s_program, "modelTransform");
+	int xyzLocation = glGetUniformLocation(s_program, "modelTransform");
 	//--- modelTransform 변수에 변환 값 적용하기
 	glUniformMatrix4fv(xyzLocation, 1, GL_FALSE, value_ptr(xyz));
 
 	//중앙선
-	glUniform3f(vColorLocation, 1.f, 0, 0);
+	glUniform3f(vColorLocation2, 0, 0, 0);
 	glDrawArrays(GL_LINES, 0, 6);
 
 
 	//도형 그리기
 	glEnable(GL_DEPTH_TEST);
 
-	glUseProgram(s_program);
-	vColorLocation = glGetUniformLocation(s_program, "out_Color");
+	//glUseProgram(s_program);
+	int vColorLocation = glGetUniformLocation(s_program, "out_Color");
 
-	glm::mat4 model = glm::mat4(1.0f);
+	mat4 model = mat4(1.0f);  mat4 cube_model = mat4(1.f);
 	mat4 TR = mat4(1.f);  mat4 RT = mat4(1.f); mat4 TR1 = mat4(1.f);  mat4 RT1 = mat4(1.f);
+	mat4 TR2 = mat4(1.f);  mat4 RT2 = mat4(1.f);
 	TR = translate(model, vec3(0.5f, 0, 0));
-	RT = rotate(model, radians(30.f + x_rotation1), vec3(0.5f, 0, 0));
-	RT = rotate(model, radians(30.f + y_rotation1), vec3(0, 1.f, 0));
+	RT1 = rotate(model, radians(30.f + x_rotation1), vec3(1.f, -0.1f, 0));
+	RT2 = rotate(model, radians(30.f + y_rotation1), vec3(-0.3f, 1.f, 0));
 
 	unsigned int modelLocation = glGetUniformLocation(s_program, "modelTransform");
 	//--- modelTransform 변수에 변환 값 적용하기
-	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT * TR * model));
+	if(x_plus1 || x_minus1)
+		glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR * RT * model));
 
-	qobj = gluNewQuadric();
-	gluQuadricDrawStyle(qobj, GLU_LINE);// 도형 스타일
-	gluQuadricNormals(qobj, GLU_SMOOTH); //생략 가능
-	gluQuadricOrientation(qobj, GLU_OUTSIDE);// 생략 가능
-	gluSphere(qobj, 0.3, 50, 50);
+	else if(x_plus2 || x_minus2)
+		glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR * RT * model));
+
+	glUniform3f(vColorLocation, 0, 0, 0);
+
+	if (c_select) {
+		qobj = gluNewQuadric();
+		gluQuadricDrawStyle(qobj, GLU_LINE);// 도형 스타일
+		gluQuadricNormals(qobj, GLU_SMOOTH); //생략 가능
+		gluQuadricOrientation(qobj, GLU_OUTSIDE);// 생략 가능
+		gluSphere(qobj, 0.3, 50, 50);
+	}
+
+	else if (!c_select) {
+		qobj = gluNewQuadric(); // 객체 생성하기
+		gluQuadricDrawStyle(qobj, GLU_LINE); // 도형 스타일
+		gluQuadricNormals(qobj, GLU_SMOOTH); // 생략 가능
+		gluQuadricOrientation(qobj, GLU_OUTSIDE); // 생략 가능
+		gluCylinder(qobj, 0.3, 0.0, 0.5, 20, 8);
+	}
 
 	
 	//큐브
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	
 
 	TR1 = translate(model, vec3(-0.5f, 0, 0));
-	RT1 = rotate(model, radians(30.f + x_rotation2), vec3(-0.5f, 1.f, 0));
-	RT1 = rotate(model, radians(30.f + y_rotation2), vec3(-0.5f, 1.f, 0));
-	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT * TR * model));
+	RT1 = rotate(model, radians(30.f + x_rotation1), vec3(0, -0.5, 0));
+	RT1 = rotate(model, radians(30.f + y_rotation1), vec3(-0.3f, 1.f, 0));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT1 * TR1 * cube_model));
 
-	glBindVertexArray(vao[1]);
-	glEnableVertexAttribArray(0);
 
-	for (int i = 0; i < 6; i++)
-	{
+	if (c_select) {
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-		if (i == 0)
-			glUniform3f(vColorLocation, 1.f, 0, 0);
+		glBindVertexArray(vao[1]);
+		glEnableVertexAttribArray(0);
 
-		if (i == 2)
-			glUniform3f(vColorLocation, 0, 1.f, 0);
+		for (int i = 0; i < 6; i++)
+		{
 
-		if (i == 4)
-			glUniform3f(vColorLocation, 0, 0, 1.f);
+			if (i == 0)
+				glUniform3f(vColorLocation, 1.f, 0, 0);
 
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * i * 6));
+			if (i == 2)
+				glUniform3f(vColorLocation, 0, 1.f, 0);
 
+			if (i == 4)
+				glUniform3f(vColorLocation, 0, 0, 1.f);
+
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * i * 6));
+
+		}
+	}
+
+	if (!c_select) {
+		qobj = gluNewQuadric(); // 객체 생성하기
+		gluQuadricDrawStyle(qobj, GLU_LINE); // 도형 스타일
+		gluQuadricNormals(qobj, GLU_SMOOTH); // 생략 가능
+		gluQuadricOrientation(qobj, GLU_OUTSIDE); // 생략 가능
+		gluCylinder(qobj, 0.3, 0.3, 0.5, 20, 8);
 	}
 
 	glutSwapBuffers(); //--- 화면에 출력하기
@@ -255,9 +287,9 @@ void make_fragmentShader()
 
 void InitBuffer()
 {
-	glGenVertexArrays(3, vao); //--- VAO 를 지정하고 할당하기
-	glGenBuffers(3, vbo); //--- 2개의 VBO를 지정하고 할당하기
-	glGenBuffers(2, ebo);
+	glGenVertexArrays(2, vao); //--- VAO 를 지정하고 할당하기
+	glGenBuffers(2, vbo); //--- 2개의 VBO를 지정하고 할당하기
+	glGenBuffers(1, ebo);
 
 	//--- attribute 인덱스 0번을 사용가능하게 함
 	glBindVertexArray(vao[0]);
@@ -270,17 +302,7 @@ void InitBuffer()
 	FILE* fp;
 	fp = fopen("cube.obj", "rb");
 	ReadObj(fp, cube);
-	for (int i = 0; i < 12; i++)
-	{
-		cout << cube.face[i].a << "," << cube.face[i].b << ", " << cube.face[i].c << endl;
-	}
-	cout << endl;
-	for (int i = 0; i < 8; i++)
-	{
-		cout << cube.vertex[i].x << "," << cube.vertex[i].y << ", " << cube.vertex[i].z << endl;
-	}
-	cout << endl;
-	cout << sizeof(FACE) << endl;
+
 	glBindVertexArray(vao[1]);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
 	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(vec3), cube.vertex, GL_STATIC_DRAW);
@@ -340,40 +362,81 @@ void Keyboard(unsigned char key, int x, int y)
 {
 	switch (key)
 	{
+	case 'r':
+
+		break;
+
 	case 'x':
-		x_plus1 != x_plus1;
+		x_plus1 = !x_plus1;
 		glutTimerFunc(10, Timer, 1);
 		break;
 
 	case 'X':
-		x_minus1 != x_minus1;
+		x_minus1 = !x_minus1;
 		glutTimerFunc(10, Timer, 1);
 		break;
 
 	case 'y':
-		y_plus1 != y_plus1;
+		y_plus1 = !y_plus1;
 		glutTimerFunc(10, Timer, 1);
 		break;
 
 	case 'Y':
-		y_minus1 != y_minus1;
+		y_minus1 = !y_minus1;
 		glutTimerFunc(10, Timer, 1);
 		break;
 
 	case 'q':
 		glutLeaveMainLoop();
 		break;
+
+	case 'a':
+		x_plus2 = !x_plus2;
+		glutTimerFunc(10, Timer, 1);
+		break;
+
+	case 'A':
+		x_minus2 = !x_minus2;
+		glutTimerFunc(10, Timer, 1);
+		break;
+
+	case 'b':
+		y_plus2 = !y_plus2;
+		glutTimerFunc(10, Timer, 1);
+		break;
+
+	case 'B':
+		y_minus2 = !y_minus2;
+		glutTimerFunc(10, Timer, 1);
+		break;
+
+	case 'c':
+		c_select = !c_select;
+		break;
+
+	case 's':
+		c_select = true;
+		x_plus1 = false;
+		y_plus1 = false;
+		x_minus1 = false;
+		y_minus1 = false;
+		x_plus2 = false;
+		y_plus2 = false;
+		x_minus2 = false;
+		y_minus2 = false;
+		x_rotation1 = y_rotation1 = x_rotation2 = y_rotation2 = 0;
+		break;
 	}
 
-	glBindVertexArray(vao[1]);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(vec3), cube.vertex, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+	//glBindVertexArray(vao[1]);
+	//glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+	//glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(vec3), cube.vertex, GL_STATIC_DRAW);
+	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
 
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo[0]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 12 * sizeof(FACE), cube.face, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
-	glEnableVertexAttribArray(0);
+	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo[0]);
+	//glBufferData(GL_ELEMENT_ARRAY_BUFFER, 12 * sizeof(FACE), cube.face, GL_STATIC_DRAW);
+	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+	//glEnableVertexAttribArray(0);
 
 	glutPostRedisplay();
 }
@@ -395,6 +458,25 @@ void Timer(int value)
 	if (y_minus1) {
 		y_rotation1 -= 1;
 	}
+
+	if (x_plus2) {
+		x_rotation2 += 1;
+	}
+
+	if (y_plus2) {
+		y_rotation2 += 1;
+	}
+
+	if (x_minus2) {
+		x_rotation2 -= 1;
+	}
+
+	if (y_minus2) {
+		y_rotation2 -= 1;
+	}
+
+	if (!x_plus1 && !x_minus1 && !y_plus1 && !y_minus1 && !x_plus2 && !x_minus2 && !y_plus2 && !y_minus2)
+		return;
 
 	glBindVertexArray(vao[1]);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
