@@ -7,9 +7,9 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
-#include <gl/glm/glm/glm.hpp>
-#include <gl/glm/glm/ext.hpp>
-#include <gl/glm/glm/gtc/matrix_transform.hpp>
+#include <gl/glm/glm.hpp>
+#include <gl/glm/ext.hpp>
+#include <gl/glm/gtc/matrix_transform.hpp>
 //#include <glm/glm/glm.hpp>
 //#include <glm/glm/ext.hpp>
 //#include <glm/glm/gtc/matrix_transform.hpp>
@@ -56,7 +56,11 @@ float x_rotation1 = 0;
 float y_rotation1 = 0;
 float x_rotation2 = 0;
 float y_rotation2 = 0;
+float y_rotation3 = 0;
 
+
+bool r_plus = false;
+bool r_minus = false;
 bool x_plus1 = false;
 bool y_plus1 = false;
 bool x_minus1 = false;
@@ -129,7 +133,8 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 	glEnableVertexAttribArray(0);
 
 	mat4 xyz = mat4(1.0f);
-	xyz = rotate(xyz, radians(30.f), vec3(-1.f, 1.f, 0));
+	xyz = rotate(xyz, radians(30.f), vec3(1.f, 0, 0));
+	xyz = rotate(xyz, radians(30.f), vec3(0, -1.f, 0));
 
 	int xyzLocation = glGetUniformLocation(s_program, "modelTransform");
 	//--- modelTransform 변수에 변환 값 적용하기
@@ -147,19 +152,21 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 	int vColorLocation = glGetUniformLocation(s_program, "out_Color");
 
 	mat4 model = mat4(1.0f);  mat4 cube_model = mat4(1.f);
-	mat4 TR = mat4(1.f);  mat4 RT = mat4(1.f); mat4 TR1 = mat4(1.f);  mat4 RT1 = mat4(1.f);
-	mat4 TR2 = mat4(1.f);  mat4 RT2 = mat4(1.f);
-	TR = translate(model, vec3(0.5f, 0, 0));
-	RT1 = rotate(model, radians(30.f + x_rotation1), vec3(1.f, -0.1f, 0));
-	RT2 = rotate(model, radians(30.f + y_rotation1), vec3(-0.3f, 1.f, 0));
+	mat4 RT = mat4(1.f); mat4 RT1 = mat4(1.f); mat4 RT2 = mat4(1.f); mat4 RT3 = mat4(1.f); mat4 RT4 = mat4(1.f);
+
+	model = rotate(model, radians(30.f), vec3(1.f, 0, 0));
+	model = rotate(model, radians(30.f), vec3(0, -1.f, 0));
+	model = translate(model, vec3(0.5f, 0, 0));
+	RT = rotate(RT, radians(x_rotation1), vec3(1.f, 0, 0));
+	RT1 = rotate(RT1, radians(y_rotation1), vec3(0, 1.f, 0));
+	RT2 = rotate(RT2, radians(30.f), vec3(1.f, 0, 0));
+	RT2 = rotate(RT2, radians(y_rotation3), vec3(0, 1.f, 0));
 
 	unsigned int modelLocation = glGetUniformLocation(s_program, "modelTransform");
 	//--- modelTransform 변수에 변환 값 적용하기
-	if(x_plus1 || x_minus1)
-		glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR * RT * model));
+	//glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT2_1 * TR * RT * RT1 * model));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT2 * model * RT * RT1));
 
-	else if(x_plus2 || x_minus2)
-		glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR * RT * model));
 
 	glUniform3f(vColorLocation, 0, 0, 0);
 
@@ -181,12 +188,13 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 
 	
 	//큐브
-	
+	cube_model = rotate(cube_model, radians(30.f), vec3(1.f, 0, 0));
+	cube_model = rotate(cube_model, radians(30.f), vec3(0, -1.f, 0));
+	cube_model = translate(cube_model, vec3(-0.5f, 0, 0));
+	RT3 = rotate(RT3, radians(x_rotation2), vec3(1.f, 0, 0));
+	RT4 = rotate(RT4, radians(y_rotation2), vec3(0, 1.f, 0));
 
-	TR1 = translate(model, vec3(-0.5f, 0, 0));
-	RT1 = rotate(model, radians(30.f + x_rotation1), vec3(0, -0.5, 0));
-	RT1 = rotate(model, radians(30.f + y_rotation1), vec3(-0.3f, 1.f, 0));
-	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT1 * TR1 * cube_model));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT2 * cube_model * RT3 * RT4));
 
 
 	if (c_select) {
@@ -363,7 +371,13 @@ void Keyboard(unsigned char key, int x, int y)
 	switch (key)
 	{
 	case 'r':
+		r_plus = !r_plus;
+		glutTimerFunc(10, Timer, 1);
+		break;
 
+	case 'R':
+		r_minus = !r_minus;
+		glutTimerFunc(10, Timer, 1);
 		break;
 
 	case 'x':
@@ -424,7 +438,9 @@ void Keyboard(unsigned char key, int x, int y)
 		y_plus2 = false;
 		x_minus2 = false;
 		y_minus2 = false;
-		x_rotation1 = y_rotation1 = x_rotation2 = y_rotation2 = 0;
+		r_plus = false;
+		r_minus = false;
+		x_rotation1 = y_rotation1 = x_rotation2 = y_rotation2 = y_rotation3 = 0;
 		break;
 	}
 
@@ -475,7 +491,13 @@ void Timer(int value)
 		y_rotation2 -= 1;
 	}
 
-	if (!x_plus1 && !x_minus1 && !y_plus1 && !y_minus1 && !x_plus2 && !x_minus2 && !y_plus2 && !y_minus2)
+	if (r_plus)
+		y_rotation3 += 1;
+
+	if (r_minus)
+		y_rotation3 -= 1;
+
+	if (!x_plus1 && !x_minus1 && !y_plus1 && !y_minus1 && !x_plus2 && !x_minus2 && !y_plus2 && !y_minus2 && !r_minus && !r_plus)
 		return;
 
 	glBindVertexArray(vao[1]);
