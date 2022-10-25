@@ -7,9 +7,9 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
-#include <gl/glm/glm/glm.hpp>
-#include <gl/glm/glm/ext.hpp>
-#include <gl/glm/glm/gtc/matrix_transform.hpp>
+#include <gl/glm/glm.hpp>
+#include <gl/glm/ext.hpp>
+#include <gl/glm/gtc/matrix_transform.hpp>
 //#include <glm/glm/glm.hpp>
 //#include <glm/glm/ext.hpp>
 //#include <glm/glm/gtc/matrix_transform.hpp>
@@ -38,10 +38,11 @@ typedef struct READ {
 };
 
 typedef struct CYCLONE {
-	GLfloat point[700][3];
+	float point[300][3];
 	float radius;
 	float origin[2], theta;
-	int point_count, radian;
+	int point_count;
+	float radian;
 };
 
 //변수
@@ -61,13 +62,18 @@ READ tetra;
 
 CYCLONE cyclone;
 
-bool isOrigin = false;
+bool isOrigin = true;
 
 float x_rotation1 = 0;
 float y_rotation1 = 0;
 float x_rotation2 = 0;
 float y_rotation2 = 0;
 float y_rotation3 = 0;
+
+int a = 0;
+bool isR_on = false;
+
+mat4 TR_CYC = mat4(1.f);
 
 
 //함수
@@ -137,87 +143,84 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 	glEnableVertexAttribArray(0);
 
 	mat4 xyz = mat4(1.0f);
-	/*xyz = rotate(xyz, radians(30.f), vec3(1.f, 0, 0));
-	xyz = rotate(xyz, radians(30.f), vec3(0, -1.f, 0));*/
+	xyz = rotate(xyz, radians(30.f), vec3(1.f, 0, 0));
+	xyz = rotate(xyz, radians(30.f), vec3(0, -1.f, 0));
 
 	int xyzLocation = glGetUniformLocation(s_program, "modelTransform");
 	//--- modelTransform 변수에 변환 값 적용하기
 	glUniformMatrix4fv(xyzLocation, 1, GL_FALSE, value_ptr(xyz));
 
-	////중앙선
-	//glUniform3f(vColorLocation2, 0, 0, 0);
-	//glDrawArrays(GL_LINES, 0, 6);
-
-
-	////도형 그리기
-	//glEnable(GL_DEPTH_TEST);
-
-	////glUseProgram(s_program);
-	//int vColorLocation = glGetUniformLocation(s_program, "out_Color");
-
-	//mat4 model = mat4(1.0f);  mat4 cube_model = mat4(1.f);
-	//mat4 RT = mat4(1.f); mat4 RT1 = mat4(1.f); mat4 RT2 = mat4(1.f); mat4 RT3 = mat4(1.f); mat4 RT4 = mat4(1.f);
-
-	//model = rotate(model, radians(30.f), vec3(1.f, 0, 0));
-	//model = rotate(model, radians(30.f), vec3(0, -1.f, 0));
-	//model = translate(model, vec3(0.5f, 0, 0));
-	//RT = rotate(RT, radians(x_rotation1), vec3(1.f, 0, 0));
-	//RT1 = rotate(RT1, radians(y_rotation1), vec3(0, 1.f, 0));
-	//RT2 = rotate(RT2, radians(30.f), vec3(1.f, 0, 0));
-	//RT2 = rotate(RT2, radians(y_rotation3), vec3(0, 1.f, 0));
-
-	//unsigned int modelLocation = glGetUniformLocation(s_program, "modelTransform");
-	////--- modelTransform 변수에 변환 값 적용하기
-	////glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT2_1 * TR * RT * RT1 * model));
-	//glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT2 * model * RT * RT1));
-
-
-	//glUniform3f(vColorLocation, 0, 0, 0);
-
-	//qobj = gluNewQuadric();
-	//gluQuadricDrawStyle(qobj, GLU_LINE);// 도형 스타일
-	//gluQuadricNormals(qobj, GLU_SMOOTH); //생략 가능
-	//gluQuadricOrientation(qobj, GLU_OUTSIDE);// 생략 가능
-	//gluSphere(qobj, 0.1, 30, 30);
-
-
-	////큐브
-	//cube_model = rotate(cube_model, radians(30.f), vec3(1.f, 0, 0));
-	//cube_model = rotate(cube_model, radians(30.f), vec3(0, -1.f, 0));
-	//cube_model = translate(cube_model, vec3(-0.5f, 0, 0));
-	//RT3 = rotate(RT3, radians(x_rotation2), vec3(1.f, 0, 0));
-	//RT4 = rotate(RT4, radians(y_rotation2), vec3(0, 1.f, 0));
-
-	//glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT2 * cube_model * RT3 * RT4));
-
-
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-	//glBindVertexArray(vao[1]);
-	//glEnableVertexAttribArray(0);
-
-	//for (int i = 0; i < 6; i++)
-	//{
-
-	//	if (i == 0)
-	//		glUniform3f(vColorLocation, 1.f, 0, 0);
-
-	//	if (i == 2)
-	//		glUniform3f(vColorLocation, 0, 1.f, 0);
-
-	//	if (i == 4)
-	//		glUniform3f(vColorLocation, 0, 0, 1.f);
-
-	//	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * i * 6));
-
-	//}
+	//중앙선
+	glUniform3f(vColorLocation2, 0, 0, 0);
+	glDrawArrays(GL_LINES, 0, 6);
 
 	glBindVertexArray(vao[2]);
 	glEnableVertexAttribArray(0);
 
 	cout << cyclone.point_count << endl;
 	glPointSize(5);
-	glDrawArrays(GL_POINTS, 0, cyclone.point_count);
+	glDrawArrays(GL_LINE_STRIP, 0, cyclone.point_count - 18);
+
+	//도형 그리기
+	glEnable(GL_DEPTH_TEST);
+
+	//glUseProgram(s_program);
+	int vColorLocation = glGetUniformLocation(s_program, "out_Color");
+
+	mat4 model = mat4(1.0f);  mat4 cube_model = mat4(1.f);
+	mat4 RT = mat4(1.f); mat4 RT1 = mat4(1.f); mat4 RT2 = mat4(1.f); mat4 RT3 = mat4(1.f); mat4 RT4 = mat4(1.f);
+
+	model = rotate(model, radians(30.f), vec3(1.f, 0, 0));
+	model = rotate(model, radians(30.f), vec3(0, -1.f, 0));
+	if (!isR_on) {
+		model = translate(model, vec3(0.5f, 0, 0));
+		RT = rotate(RT, radians(x_rotation1), vec3(1.f, 0, 0));
+		RT2 = rotate(RT2, radians(30.f), vec3(1.f, 0, 0));
+	}
+
+	unsigned int modelLocation = glGetUniformLocation(s_program, "modelTransform");
+	//--- modelTransform 변수에 변환 값 적용하기
+	//glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT2_1 * TR * RT * RT1 * model));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT2 * model * RT * RT1 * TR_CYC));
+
+
+	glUniform3f(vColorLocation, 0, 0, 0);
+
+	qobj = gluNewQuadric();
+	gluQuadricDrawStyle(qobj, GLU_LINE);// 도형 스타일
+	gluQuadricNormals(qobj, GLU_SMOOTH); //생략 가능
+	gluQuadricOrientation(qobj, GLU_OUTSIDE);// 생략 가능
+	gluSphere(qobj, 0.1, 30, 30);
+
+
+	//큐브
+	cube_model = rotate(cube_model, radians(30.f), vec3(1.f, 0, 0));
+	cube_model = rotate(cube_model, radians(30.f), vec3(0, -1.f, 0));
+	cube_model = translate(cube_model, vec3(-0.5f, 0, 0));
+
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT2 * cube_model * RT3 * RT4));
+
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	glBindVertexArray(vao[1]);
+	glEnableVertexAttribArray(0);
+
+	for (int i = 0; i < 6; i++)
+	{
+
+		if (i == 0)
+			glUniform3f(vColorLocation, 1.f, 0, 0);
+
+		if (i == 2)
+			glUniform3f(vColorLocation, 0, 1.f, 0);
+
+		if (i == 4)
+			glUniform3f(vColorLocation, 0, 0, 1.f);
+
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * i * 6));
+
+	}
 
 	glutSwapBuffers(); //--- 화면에 출력하기
 }
@@ -368,6 +371,11 @@ void Keyboard(unsigned char key, int x, int y)
 {
 	switch (key)
 	{
+	case 'r':
+		isR_on = !isR_on;
+		glutTimerFunc(10, Timer, 1);
+		break;
+
 	case 'q':
 		glutLeaveMainLoop();
 		break;
@@ -388,7 +396,16 @@ void Keyboard(unsigned char key, int x, int y)
 
 void Timer(int value)
 {
+	if (isR_on) {
+		
+		TR_CYC = translate(TR_CYC, vec3(cyclone.point[a][0], 0, cyclone.point[a][2]));
+		if(a < cyclone.point_count)
+			a++;
+		
+	}
 
+	else if (!isR_on)
+		a = 0;
 
 	glutTimerFunc(10, Timer, 1);
 
@@ -412,34 +429,33 @@ void enter()
 	cyclone.theta = 0;
 	cyclone.radius = 0.1f;
 	cyclone.radian = 0;
-	cyclone.point_count = 10;
+	cyclone.point_count = 18;
 }
 
 void draw_cyclone() {
 	cout << "회오리" << endl;
 	int temp = 0;
-	int a = 10;
+	int i = 0;
 	for (int j = 0; j < 6; j++) {
+		//cyclone.radian = 0;
 		for (int i = temp; i < cyclone.point_count; i++) {
-			cyclone.theta = PI * cyclone.radian / 180;
-			cyclone.radian += 180 / (cyclone.point_count - temp);
-			cyclone.radian %= 360;
-			cyclone.point[i][0] = cyclone.origin[0] + cyclone.radius * cos(cyclone.theta); cyclone.point[i][1] = cyclone.origin[1] + cyclone.radius * sin(cyclone.theta);
-			cyclone.point[i][2] = 0;
-
+			cyclone.point[i][0] = cyclone.origin[0] + cyclone.radius * cos(radians(cyclone.radian)); cyclone.point[i][1] = 0;
+			cyclone.point[i][2] = cyclone.radius * sin(radians(cyclone.radian));
+			cyclone.radian += 180 /(cyclone.point_count - temp);
+			//cyclone.radian %= 360;
+			//cyclone.theta = PI * cyclone.radian / 180;
 		}
 		cout << cyclone.point_count << endl;
-		a *= 2;
 		temp = cyclone.point_count;
-		cyclone.point_count *= 2;
+		cyclone.point_count += 18;
 		cyclone.radius += 0.1f;
+
+		isOrigin = !isOrigin;
 		if (isOrigin) {
 			cyclone.origin[0] = 0;
-			isOrigin = !isOrigin;
 		}
 		else if (!isOrigin) {
 			cyclone.origin[0] = 0.1f;
-			isOrigin = !isOrigin;
 		}
 	}
 
