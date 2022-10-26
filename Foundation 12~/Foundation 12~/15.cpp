@@ -7,12 +7,12 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
-#include <gl/glm/glm.hpp>
-#include <gl/glm/ext.hpp>
-#include <gl/glm/gtc/matrix_transform.hpp>
-//#include <glm/glm/glm.hpp>
-//#include <glm/glm/ext.hpp>
-//#include <glm/glm/gtc/matrix_transform.hpp>
+//#include <gl/glm/glm.hpp>
+//#include <gl/glm/ext.hpp>
+//#include <gl/glm/gtc/matrix_transform.hpp>
+#include <glm/glm/glm.hpp>
+#include <glm/glm/ext.hpp>
+#include <glm/glm/gtc/matrix_transform.hpp>
 
 using namespace glm;
 using namespace std;
@@ -64,16 +64,22 @@ CYCLONE cyclone;
 
 bool isOrigin = true;
 
-float x_rotation1 = 0;
-float y_rotation1 = 0;
-float x_rotation2 = 0;
-float y_rotation2 = 0;
-float y_rotation3 = 0;
-
 int a = 0;
-bool isR_on = false;
+bool plus_a = true;
 
-mat4 TR_CYC = mat4(1.f);
+int s_count = 0;
+bool plus_s = true;
+
+bool isR_on = false;
+bool isT_on = false;
+bool isS_on = false;
+
+float x_trans = 0;
+float y_trans = 0;
+
+
+mat4 TR_CYC2 = mat4(1.f);
+mat4 S_TR = mat4(1.f);
 
 
 //함수
@@ -93,6 +99,7 @@ void draw_cyclone();
 void enter();
 
 void Keyboard(unsigned char key, int x, int y);
+void SpecialKeyboard(int key, int x, int y);
 void Timer(int value);
 
 
@@ -124,6 +131,7 @@ void main(int argc, char** argv) { //--- 윈도우 출력하고 콜백함수 설정 //--- 윈�
 	glutDisplayFunc(drawScene); // 출력 함수의 지정
 	glutReshapeFunc(Reshape); // 다시 그리기 함수 지정
 	glutKeyboardFunc(Keyboard);
+	glutSpecialFunc(SpecialKeyboard);
 	glutMainLoop(); // 이벤트 처리 시작 }
 }
 
@@ -154,6 +162,7 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 	glUniform3f(vColorLocation2, 0, 0, 0);
 	glDrawArrays(GL_LINES, 0, 6);
 
+	//회오리
 	glBindVertexArray(vao[2]);
 	glEnableVertexAttribArray(0);
 
@@ -168,20 +177,36 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 	int vColorLocation = glGetUniformLocation(s_program, "out_Color");
 
 	mat4 model = mat4(1.0f);  mat4 cube_model = mat4(1.f);
-	mat4 RT = mat4(1.f); mat4 RT1 = mat4(1.f); mat4 RT2 = mat4(1.f); mat4 RT3 = mat4(1.f); mat4 RT4 = mat4(1.f);
+	mat4 TR_CYC = mat4(1.f);  mat4 TR_CYC2 = mat4(1.f);
+	mat4 S_TR = mat4(1.f); mat4 S_TR2 = mat4(1.f);
 
 	model = rotate(model, radians(30.f), vec3(1.f, 0, 0));
 	model = rotate(model, radians(30.f), vec3(0, -1.f, 0));
-	if (!isR_on) {
-		model = translate(model, vec3(0.5f, 0, 0));
-		RT = rotate(RT, radians(x_rotation1), vec3(1.f, 0, 0));
-		RT2 = rotate(RT2, radians(30.f), vec3(1.f, 0, 0));
+	model = translate(model, vec3(0.5f, 0, 0));
+	model = translate(model, vec3(x_trans, 0, y_trans));
+	if (isR_on) {
+		model = translate(model, vec3(-0.5f, 0, 0));
+		TR_CYC = translate(TR_CYC, vec3(cyclone.point[a][0], 0, cyclone.point[a][2]));
 	}
+
+	if (isS_on || isT_on) {
+		if (plus_s) {
+			S_TR = translate(S_TR, vec3(s_count * -0.05f, 0, 0));
+			s_count++;
+		}
+		else if (!plus_s) {
+			S_TR = translate(S_TR, vec3(s_count * -0.05f, 0, y_trans / 10));
+			s_count--;
+		}
+	}
+
+	cout << s_count << endl;
+
 
 	unsigned int modelLocation = glGetUniformLocation(s_program, "modelTransform");
 	//--- modelTransform 변수에 변환 값 적용하기
 	//glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT2_1 * TR * RT * RT1 * model));
-	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT2 * model * RT * RT1 * TR_CYC));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model * TR_CYC * S_TR));
 
 
 	glUniform3f(vColorLocation, 0, 0, 0);
@@ -197,8 +222,24 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 	cube_model = rotate(cube_model, radians(30.f), vec3(1.f, 0, 0));
 	cube_model = rotate(cube_model, radians(30.f), vec3(0, -1.f, 0));
 	cube_model = translate(cube_model, vec3(-0.5f, 0, 0));
+	cube_model = translate(cube_model, vec3(x_trans, 0, y_trans));
 
-	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT2 * cube_model * RT3 * RT4));
+	if (isR_on) {
+		cube_model = translate(cube_model, vec3(0.5f, 0, 0));
+		TR_CYC2 = translate(TR_CYC2, vec3(cyclone.point[cyclone.point_count - 19 - a][0], 0, cyclone.point[cyclone.point_count - 19 - a][2]));
+	}
+
+	if (isS_on || isT_on) {
+		if (plus_s) {
+			S_TR2 = translate(S_TR2, vec3(s_count * 0.05f, 0, 0));
+			s_count++;
+		} else if (!plus_s) {
+			S_TR2 = translate(S_TR2, vec3(s_count * 0.05f, 0, 0));
+			s_count--;
+		}
+	}
+
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(cube_model * TR_CYC2 * S_TR2));
 
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -376,6 +417,16 @@ void Keyboard(unsigned char key, int x, int y)
 		glutTimerFunc(10, Timer, 1);
 		break;
 
+	case 't':
+		isT_on = !isT_on;
+		glutTimerFunc(100, Timer, 1);
+		break;
+
+	case 's':
+		isS_on = !isS_on;
+		glutTimerFunc(100, Timer, 1);
+		break;
+
 	case 'q':
 		glutLeaveMainLoop();
 		break;
@@ -397,18 +448,79 @@ void Keyboard(unsigned char key, int x, int y)
 void Timer(int value)
 {
 	if (isR_on) {
-		
-		TR_CYC = translate(TR_CYC, vec3(cyclone.point[a][0], 0, cyclone.point[a][2]));
-		if(a < cyclone.point_count)
+		if (plus_a) {
 			a++;
-		
+			if (a == cyclone.point_count - 19)
+				plus_a = !plus_a;
+		}
+
+		else if (!plus_a) {
+			a--;
+			if (a == 0)
+				plus_a = !plus_a;
+		}
+			
+
 	}
 
-	else if (!isR_on)
+	if (isS_on) {
+		if (plus_s) {
+			if (s_count == 10) {
+				plus_s = !plus_s;
+			}
+		}
+
+		else if (!plus_s) {
+			if (s_count == 0) {
+				plus_s = !plus_s;
+			}
+		}
+	}
+
+	if (isT_on) {
+		if (plus_s) {
+			if (s_count == 20) {
+				plus_s = !plus_s;
+			}
+		}
+
+		else if (!plus_s) {
+			if (s_count == 0) {
+				plus_s = !plus_s;
+			}
+		}
+	}
+
+	if (!isR_on && !isT_on && !isS_on) {
 		a = 0;
+		plus_a = true;
+		plus_s = true;
+		s_count = 0;
+		return;
+	}
 
-	glutTimerFunc(10, Timer, 1);
+	glutTimerFunc(30, Timer, 1);
 
+	glutPostRedisplay();
+}
+
+void SpecialKeyboard(int key, int x, int y)
+{
+	if (key == GLUT_KEY_UP) {
+		y_trans += 0.01f;
+	}
+
+	else if (key == GLUT_KEY_DOWN) {
+		y_trans -= 0.01f;
+	}
+
+	else if (key == GLUT_KEY_LEFT) {
+		x_trans -= 0.01f;
+	}
+
+	else if (key == GLUT_KEY_RIGHT) {
+		x_trans += 0.01f;
+	}
 	glutPostRedisplay();
 }
 
@@ -433,7 +545,6 @@ void enter()
 }
 
 void draw_cyclone() {
-	cout << "회오리" << endl;
 	int temp = 0;
 	int i = 0;
 	for (int j = 0; j < 6; j++) {
@@ -445,7 +556,6 @@ void draw_cyclone() {
 			//cyclone.radian %= 360;
 			//cyclone.theta = PI * cyclone.radian / 180;
 		}
-		cout << cyclone.point_count << endl;
 		temp = cyclone.point_count;
 		cyclone.point_count += 18;
 		cyclone.radius += 0.1f;
