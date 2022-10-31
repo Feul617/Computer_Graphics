@@ -26,6 +26,65 @@ std::random_device rd;
 std::mt19937 gen(rd());
 std::uniform_real_distribution<GLfloat> dis(0, 1);
 
+class object_state
+{
+private:
+	vec3 trans;
+	vec3 rotate;
+	vec3 pivot;
+
+public:
+	object_state()
+	{
+		trans.x = 0.0; trans.y = 0.0; trans.z = 0.0;
+		rotate.x = 0.0; rotate.y = 0.0; rotate.z = 0.0;
+		pivot.x = 0.0; pivot.y = 0.0; pivot.z = 0.0;
+	}
+
+	void PlusTrans(GLfloat x, GLfloat y, GLfloat z)
+	{
+		trans.x += x; trans.y += y; trans.z += z;
+	}
+	void SetTrans(GLfloat x, GLfloat y, GLfloat z)
+	{
+		trans.x = x; trans.y = y; trans.z = z;
+	}
+	void PlusRotate(GLfloat x, GLfloat y, GLfloat z)
+	{
+		rotate.x += x; rotate.y += y; rotate.z += z;
+	}
+	void SetRotate(GLfloat x, GLfloat y, GLfloat z)
+	{
+		rotate.x = x; rotate.y = y; rotate.z = z;
+	}
+	void SetPibot(GLfloat x, GLfloat y, GLfloat z)
+	{
+		pivot.x = x; pivot.y = y; pivot.z = z;
+	}
+
+	//---멤버변수 GET
+	glm::vec3 GetTrans() { return trans; }
+	glm::vec3 GetRotate() { return rotate; }
+	glm::vec3 GetPibot() { return pivot; }
+
+	glm::mat4 RotateAtPibot(glm::mat4 TR)
+	{
+		TR = glm::translate(TR, glm::vec3(pivot.x, pivot.y, pivot.z));
+		TR = glm::rotate(TR, (GLfloat)glm::radians(rotate.x), glm::vec3(1.0, 0.0, 0.0));
+		TR = glm::rotate(TR, (GLfloat)glm::radians(rotate.y), glm::vec3(0.0, 1.0, 0.0));
+		TR = glm::rotate(TR, (GLfloat)glm::radians(rotate.z), glm::vec3(0.0, 0.0, 1.0));
+		TR = glm::translate(TR, glm::vec3(-1 * pivot.x, -1 * pivot.y, -1 * pivot.z));
+
+		return TR;
+	}
+	glm::mat4 Translate(glm::mat4 TR)
+	{
+		TR = glm::translate(TR, glm::vec3(trans.x, trans.y, trans.z));
+
+		return TR;
+	}
+};
+
 typedef struct FACE {
 	int a, b, c;
 };
@@ -37,54 +96,26 @@ typedef struct READ {
 	FACE* face;
 };
 
-typedef struct CYCLONE {
-	float point[300][3];
-	float radius;
-	float origin[2], theta;
-	int point_count;
-	float radian;
-};
-
 //변수
 GLchar* vertexsource[2], * fragmentsource[2];
-GLuint vertexshader[2], fragmentshader[2], vao[3], vbo[3], ebo[1];
+GLuint vertexshader[2], fragmentshader[2], vao[3], vbo[3], ebo[2];
 GLuint s_program, s_program_plat, shaderID;
 GLfloat rColor = 1.f, bColor = 1.f, gColor = 1.f;
 GLint result;
 GLchar errorLog[512];
 
-GLUquadricObj* qobj;
+READ cube;
+READ pyramid;
 
 GLfloat middle_line[6][3] = {};
+object_state cube_side[6];
+object_state pyramid_side[5];
 
-READ cube;
-READ tetra;
+bool ortho_on = false;
+bool pyramid_on = false;
 
-CYCLONE cyclone;
-
-bool isOrigin = true;
-
-int a = 0;
-
-int s_count = 0;
-GLfloat a_count = 1.f;
-GLfloat c_count = 1.f;
-
-bool plus_s = true;
-bool plus_a = true;
-
-bool isR_on = false;
-bool isT_on = false;
-bool isS_on = false;
-bool isA_on = false;
-
-float x_trans = 0;
-float y_trans = 0;
-
-
-mat4 TR_CYC2 = mat4(1.f);
-mat4 S_TR = mat4(1.f);
-
+//---자전 회전 
+GLfloat y_radian = 0;
 
 //함수
 GLvoid drawScene(GLvoid);
@@ -99,11 +130,8 @@ void ReadObj(FILE* objFile, READ& Read);
 
 //그리기 함수
 void draw_middle_line();
-void draw_cyclone();
-void enter();
 
 void Keyboard(unsigned char key, int x, int y);
-void SpecialKeyboard(int key, int x, int y);
 void Timer(int value);
 
 
@@ -126,8 +154,14 @@ void main(int argc, char** argv) { //--- 윈도우 출력하고 콜백함수 설정 //--- 윈�
 		std::cout << "GLEW Initialized\n";
 
 	draw_middle_line();
-	enter();
-	draw_cyclone();
+
+	cube_side[2].SetPibot(0, 0.5f, 0);
+	cube_side[5].SetPibot(0, -1 * 0.5f, 0.5f);
+
+	pyramid_side[0].SetPibot(0, 0, -0.3);
+	pyramid_side[1].SetPibot(-0.3, 0, 0);
+	pyramid_side[2].SetPibot(0, 0, 0.3);
+	pyramid_side[3].SetPibot(0.3, 0, 0);
 
 	InitShader();
 	InitBuffer();
@@ -135,20 +169,43 @@ void main(int argc, char** argv) { //--- 윈도우 출력하고 콜백함수 설정 //--- 윈�
 	glutDisplayFunc(drawScene); // 출력 함수의 지정
 	glutReshapeFunc(Reshape); // 다시 그리기 함수 지정
 	glutKeyboardFunc(Keyboard);
-	glutSpecialFunc(SpecialKeyboard);
 	glutMainLoop(); // 이벤트 처리 시작 }
 }
 
 GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 1.0f, 1.0f ); // 바탕색을 ‘blue’ 로 지정
 {
+	int vColorLocation = glGetUniformLocation(s_program, "out_Color");
 	int vColorLocation2 = glGetUniformLocation(s_program, "out_Color");
 	//--- 변경된 배경색 설정
 	glClearColor(rColor, gColor, bColor, 1.0f);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	//---카메라 설정
+	vec3 cameraPos = glm::vec3(-0.5f, 0.5f, 1.0f);		 //--- 카메라 위치
+	vec3 cameraDirection = glm::vec3(0.0f, 0.0f, 0.0f); //--- 카메라 바라보는 방향
+	vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);		 //--- 카메라 위쪽 방향
+	mat4 view = glm::mat4(1.0f);
+
+	view = glm::lookAt(cameraPos, cameraDirection, cameraUp);
+	unsigned int viewLoc_shape = glGetUniformLocation(s_program, "view"); //--- 뷰잉 변환 설정
+	unsigned int viewLoc_line = glGetUniformLocation(s_program, "view"); //--- 뷰잉 변환 설정
+
+	//---투영변환
+	glm::mat4 projection = glm::mat4(1.0f);
+	if (ortho_on)
+		projection = glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, -2.0f, 2.0f);
+	else
+	{
+		projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 50.0f);
+		projection = glm::translate(projection, glm::vec3(0.0, 0.0, -5.0)); //--- 공간을 약간 뒤로 미뤄줌
+	}
+
 	//--- 렌더링 파이프라인에 세이더 불러오기
 	glUseProgram(s_program);
+
+	unsigned int projLoc_shape = glGetUniformLocation(s_program, "projection");
+	unsigned int projLoc_line = glGetUniformLocation(s_program, "projection");
 
 	//--- 사용할 VAO 불러오기
 	glBindVertexArray(vao[0]);
@@ -166,111 +223,54 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 	glUniform3f(vColorLocation2, 0, 0, 0);
 	glDrawArrays(GL_LINES, 0, 6);
 
-	//회오리
-	glBindVertexArray(vao[2]);
-	glEnableVertexAttribArray(0);
-
-	cout << cyclone.point_count << endl;
-	glPointSize(5);
-	glDrawArrays(GL_LINE_STRIP, 0, cyclone.point_count - 18);
-
 	//도형 그리기
 	glEnable(GL_DEPTH_TEST);
+	glUniformMatrix4fv(viewLoc_shape, 1, GL_FALSE, &view[0][0]);
+	glUniformMatrix4fv(projLoc_shape, 1, GL_FALSE, &projection[0][0]);
 
-	//glUseProgram(s_program);
-	int vColorLocation = glGetUniformLocation(s_program, "out_Color");
+	unsigned int modelLoc = glGetUniformLocation(s_program, "model");
 
-	mat4 model = mat4(1.0f);  mat4 cube_model = mat4(1.f);
-	mat4 TR_CYC = mat4(1.f);  mat4 TR_CYC2 = mat4(1.f);
-	mat4 S_TR = mat4(1.f); mat4 S_TR2 = mat4(1.f);
-	mat4 SC1 = mat4(1.f); mat4 SC2 = mat4(1.f);
+	glm::mat4 TR_cube = glm::mat4(1.0f);
+	glm::mat4 T_cube = glm::mat4(1.0f);
+	glm::mat4 Rx_cube = glm::mat4(1.0f);
+	glm::mat4 Ry_cube = glm::mat4(1.0f);
+	glm::mat4 S_cube = glm::mat4(1.0f);
+	glm::mat4 OS_cube = glm::mat4(1.0f);
 
-	model = rotate(model, radians(30.f), vec3(1.f, 0, 0));
-	model = rotate(model, radians(30.f), vec3(0, -1.f, 0));
-	model = translate(model, vec3(0.5f, 0, 0));
-	model = translate(model, vec3(x_trans, 0, y_trans));
-	if (isR_on) {
-		model = translate(model, vec3(-0.5f, 0, 0));
-		TR_CYC = translate(TR_CYC, vec3(cyclone.point[a][0], 0, cyclone.point[a][2])); 
-	}
-
-	if (isS_on || isT_on) {
-		if (plus_s) {
-			S_TR = translate(S_TR, vec3(s_count * -0.05f, 0, 0));
-			s_count++;
-		}
-		else if (!plus_s) {
-			S_TR = translate(S_TR, vec3(s_count * -0.05f, 0, y_trans / 10));
-			s_count--;
-		}
-	}
-
-	SC1 = scale(SC1, vec3(a_count, a_count, a_count));
-
-	cout << s_count << endl;
-
-
-	unsigned int modelLocation = glGetUniformLocation(s_program, "modelTransform");
-	//--- modelTransform 변수에 변환 값 적용하기
-	//glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT2_1 * TR * RT * RT1 * model));
-	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model * TR_CYC * S_TR * SC1));
-
-
-	glUniform3f(vColorLocation, 0, 0, 0);
-
-	qobj = gluNewQuadric();
-	gluQuadricDrawStyle(qobj, GLU_LINE);// 도형 스타일
-	gluQuadricNormals(qobj, GLU_SMOOTH); //생략 가능
-	gluQuadricOrientation(qobj, GLU_OUTSIDE);// 생략 가능
-	gluSphere(qobj, 0.1, 30, 30);
-
-
-	//큐브
-	cube_model = rotate(cube_model, radians(30.f), vec3(1.f, 0, 0));
-	cube_model = rotate(cube_model, radians(30.f), vec3(0, -1.f, 0));
-	cube_model = translate(cube_model, vec3(-0.5f, 0, 0));
-	cube_model = translate(cube_model, vec3(x_trans, 0, y_trans));
-
-	if (isR_on) {
-		cube_model = translate(cube_model, vec3(0.5f, 0, 0));
-		TR_CYC2 = translate(TR_CYC2, vec3(cyclone.point[cyclone.point_count - 19 - a][0], 0, cyclone.point[cyclone.point_count - 19 - a][2]));
-	}
-
-	if (isS_on || isT_on) {
-		if (plus_s) {
-			S_TR2 = translate(S_TR2, vec3(s_count * 0.05f, 0, 0));
-			s_count++;
-		} else if (!plus_s) {
-			S_TR2 = translate(S_TR2, vec3(s_count * 0.05f, 0, 0));
-			s_count--;
-		}
-	}
-
-	SC2 = scale(SC2, vec3(c_count, c_count, c_count));
-
-	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(cube_model * TR_CYC2 * S_TR2 * SC2));
-
-
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-	glBindVertexArray(vao[1]);
-	glEnableVertexAttribArray(0);
-
-	for (int i = 0; i < 6; i++)
+	T_cube = glm::translate(T_cube, glm::vec3(0, 0, 0));
+	Rx_cube = glm::rotate(Rx_cube, (GLfloat)glm::radians(0.0), glm::vec3(1.0, 0.0, 0.0));
+	Ry_cube = glm::rotate(Ry_cube, (GLfloat)glm::radians(y_radian), glm::vec3(0.0, 1.0, 0.0));
+	S_cube = glm::scale(S_cube, glm::vec3(1.0, 1.0, 1.0));
+	if (pyramid_on == false)
 	{
+		glBindVertexArray(vao[1]);
+		for (int i = 0; i < 6; i++)
+		{
+			TR_cube = T_cube * Rx_cube * Ry_cube * S_cube;
+			TR_cube = cube_side[i].Translate(TR_cube);
+			TR_cube = cube_side[i].RotateAtPibot(TR_cube);
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(TR_cube));
 
-		if (i == 0)
-			glUniform3f(vColorLocation, 1.f, 0, 0);
-
-		if (i == 2)
-			glUniform3f(vColorLocation, 0, 1.f, 0);
-
-		if (i == 4)
-			glUniform3f(vColorLocation, 0, 0, 1.f);
-
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * i * 6));
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * i * 6));
+		}
+	}
+	else
+	{
+		glBindVertexArray(vao[2]);
+		TR_cube = T_cube * Rx_cube * Ry_cube * S_cube;
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(TR_cube));
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * 0));
+		for (int i = 2; i < 6; i++)
+		{
+			TR_cube = T_cube * Rx_cube * Ry_cube * S_cube;
+			//TR_cube = cubeside[i].Translate(TR_cube);
+			TR_cube = pyramid_side[i - 2].RotateAtPibot(TR_cube);
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(TR_cube));
+			glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * i * 3));
+		}
 
 	}
+
 
 	glutSwapBuffers(); //--- 화면에 출력하기
 }
@@ -341,7 +341,7 @@ void InitBuffer()
 {
 	glGenVertexArrays(3, vao); //--- VAO 를 지정하고 할당하기
 	glGenBuffers(3, vbo); //--- 2개의 VBO를 지정하고 할당하기
-	glGenBuffers(1, ebo);
+	glGenBuffers(2, ebo);
 
 	//--- attribute 인덱스 0번을 사용가능하게 함
 	glBindVertexArray(vao[0]);
@@ -349,13 +349,6 @@ void InitBuffer()
 
 	glBufferData(GL_ARRAY_BUFFER, 18 * sizeof(GLfloat), middle_line, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-	//회오리
-	glBindVertexArray(vao[2]);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
-	glBufferData(GL_ARRAY_BUFFER, cyclone.point_count * 3 * sizeof(GLfloat), cyclone.point, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(0);
 
 	//정육면체
 	FILE* fp;
@@ -370,6 +363,20 @@ void InitBuffer()
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo[0]);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 12 * sizeof(FACE), cube.face, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+
+	//피라미드
+	fp = fopen("pyramid.obj", "rb");
+	ReadObj(fp, pyramid);
+
+	glBindVertexArray(vao[2]);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
+	glBufferData(GL_ARRAY_BUFFER, 5 * sizeof(vec3), pyramid.vertex, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo[1]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(FACE), pyramid.face, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+
 
 }
 
@@ -421,141 +428,20 @@ void Keyboard(unsigned char key, int x, int y)
 {
 	switch (key)
 	{
-	case 'r':
-		isR_on = !isR_on;
-		glutTimerFunc(10, Timer, 1);
-		break;
-
-	case 't':
-		isT_on = !isT_on;
-		glutTimerFunc(100, Timer, 1);
-		break;
-
-	case 's':
-		isS_on = !isS_on;
-		glutTimerFunc(100, Timer, 1);
-		break;
-
-	case 'a':
-		a_count += 0.1f;
-		break;
-
-	case 'b':
-		a_count -= 0.1f;
-		break;
-
-	case 'c':
-		c_count += 0.1f;
-		break;
-
-	case 'd':
-		c_count -= 0.1f;
-		break;
-
 	case 'q':
 		glutLeaveMainLoop();
 		break;
 	}
 
-	//glBindVertexArray(vao[1]);
-	//glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-	//glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(vec3), cube.vertex, GL_STATIC_DRAW);
-	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
-
-	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo[0]);
-	//glBufferData(GL_ELEMENT_ARRAY_BUFFER, 12 * sizeof(FACE), cube.face, GL_STATIC_DRAW);
-	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
-	//glEnableVertexAttribArray(0);
 
 	glutPostRedisplay();
 }
 
 void Timer(int value)
 {
-	if (isR_on) {
-		if (plus_a) {
-			a++;
-			if (a == cyclone.point_count - 19)
-				plus_a = !plus_a;
-		}
-
-		else if (!plus_a) {
-			a--;
-			if (a == 0)
-				plus_a = !plus_a;
-		}
-			
-
-	}
-
-	if (isS_on) {
-		if (plus_s) {
-			if (s_count == 10) {
-				plus_s = !plus_s;
-			}
-		}
-
-		else if (!plus_s) {
-			if (s_count == 0) {
-				plus_s = !plus_s;
-			}
-		}
-	}
-
-	if (isT_on) {
-		if (plus_s) {
-			if (s_count == 20) {
-				plus_s = !plus_s;
-			}
-		}
-
-		else if (!plus_s) {
-			if (s_count == 0) {
-				plus_s = !plus_s;
-			}
-		}
-	}
-
-	if (isA_on) {
-		if (plus_a || a_count < 20) {
-			a_count++;
-		}
-		
-		else if (!plus_a || a_count > 0) {
-			a_count--;
-		}
-	}
-
-	if (!isR_on && !isT_on && !isS_on) {
-		a = 0;
-		plus_a = true;
-		plus_s = true;
-		s_count = 0;
-		return;
-	}
 
 	glutTimerFunc(30, Timer, 1);
 
-	glutPostRedisplay();
-}
-
-void SpecialKeyboard(int key, int x, int y)
-{
-	if (key == GLUT_KEY_UP) {
-		y_trans += 0.01f;
-	}
-
-	else if (key == GLUT_KEY_DOWN) {
-		y_trans -= 0.01f;
-	}
-
-	else if (key == GLUT_KEY_LEFT) {
-		x_trans -= 0.01f;
-	}
-
-	else if (key == GLUT_KEY_RIGHT) {
-		x_trans += 0.01f;
-	}
 	glutPostRedisplay();
 }
 
@@ -567,43 +453,6 @@ void draw_middle_line()
 	middle_line[3][0] = 0;  middle_line[3][1] = -1.f;  middle_line[3][2] = 0;
 	middle_line[4][0] = 0;  middle_line[4][1] = 0;  middle_line[4][2] = 1.f;
 	middle_line[5][0] = 0;  middle_line[5][1] = 0;  middle_line[5][2] = -1.f;
-}
-
-void enter()
-{
-	cyclone.origin[0] = 0;
-	cyclone.origin[1] = 0;
-	cyclone.theta = 0;
-	cyclone.radius = 0.1f;
-	cyclone.radian = 0;
-	cyclone.point_count = 18;
-}
-
-void draw_cyclone() {
-	int temp = 0;
-	int i = 0;
-	for (int j = 0; j < 6; j++) {
-		//cyclone.radian = 0;
-		for (int i = temp; i < cyclone.point_count; i++) {
-			cyclone.point[i][0] = cyclone.origin[0] + cyclone.radius * cos(radians(cyclone.radian)); cyclone.point[i][1] = 0;
-			cyclone.point[i][2] = cyclone.radius * sin(radians(cyclone.radian));
-			cyclone.radian += 180 /(cyclone.point_count - temp);
-			//cyclone.radian %= 360;
-			//cyclone.theta = PI * cyclone.radian / 180;
-		}
-		temp = cyclone.point_count;
-		cyclone.point_count += 18;
-		cyclone.radius += 0.1f;
-
-		isOrigin = !isOrigin;
-		if (isOrigin) {
-			cyclone.origin[0] = 0;
-		}
-		else if (!isOrigin) {
-			cyclone.origin[0] = 0.1f;
-		}
-	}
-
 }
 
 void ReadObj(FILE* objFile, READ& Read)
