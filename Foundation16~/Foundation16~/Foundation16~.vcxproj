@@ -141,14 +141,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="16.cpp" />
+    <ClCompile Include="objread.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Object Include="pyramid.obj">
+    <Object Include="pyramid_16.obj">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </Object>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="file.h" />
+    <ClInclude Include="objReader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

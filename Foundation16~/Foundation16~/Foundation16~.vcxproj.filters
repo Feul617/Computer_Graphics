@@ -18,14 +18,20 @@
     <ClCompile Include="16.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="objread.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Object Include="pyramid.obj">
+    <Object Include="pyramid_16.obj">
       <Filter>리소스 파일</Filter>
     </Object>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="file.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="objReader.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
