@@ -4,6 +4,7 @@
 #include <gl/freeglut_ext.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <random>
 #include <cassert>
 #include <glm/glm/glm.hpp>
@@ -14,6 +15,7 @@
 #include <cmath>
 
 using namespace std;
+using namespace glm;
 
 //---윈도우 사이즈 변수
 int WinSize_r = 1000;
@@ -60,18 +62,18 @@ GLfloat y_radian = 0;
 bool depthTest = true;
 
 //---각 면 정보 클래스
-class sidestate
+class Object
 {
-private:
+public:
 	glm::vec3 trans;
 	glm::vec3 rotate;
-	glm::vec3 pibot;
-public:
-	sidestate()
+	glm::vec3 pivot;
+
+	Object()
 	{
 		trans.x = 0.0; trans.y = 0.0; trans.z = 0.0;
 		rotate.x = 0.0; rotate.y = 0.0; rotate.z = 0.0;
-		pibot.x = 0.0; pibot.y = 0.0; pibot.z = 0.0;
+		pivot.x = 0.0; pivot.y = 0.0; pivot.z = 0.0;
 	}
 	//---멤버변수 SET
 	void PlusTrans(GLfloat x, GLfloat y, GLfloat z)
@@ -90,23 +92,23 @@ public:
 	{
 		rotate.x = x; rotate.y = y; rotate.z = z;
 	}
-	void SetPibot(GLfloat x, GLfloat y, GLfloat z)
+	void Setpivot(GLfloat x, GLfloat y, GLfloat z)
 	{
-		pibot.x = x; pibot.y = y; pibot.z = z;
+		pivot.x = x; pivot.y = y; pivot.z = z;
 	}
 
 	//---멤버변수 GET
 	glm::vec3 GetTrans() { return trans; }
 	glm::vec3 GetRotate() { return rotate; }
-	glm::vec3 GetPibot() { return pibot; }
+	glm::vec3 Getpivot() { return pivot; }
 
-	glm::mat4 RotateAtPibot(glm::mat4 TR)
+	glm::mat4 RotateAtpivot(glm::mat4 TR)
 	{
-		TR = glm::translate(TR, glm::vec3(pibot.x, pibot.y, pibot.z));
+		TR = glm::translate(TR, glm::vec3(pivot.x, pivot.y, pivot.z));
 		TR = glm::rotate(TR, (GLfloat)glm::radians(rotate.x), glm::vec3(1.0, 0.0, 0.0));
 		TR = glm::rotate(TR, (GLfloat)glm::radians(rotate.y), glm::vec3(0.0, 1.0, 0.0));
 		TR = glm::rotate(TR, (GLfloat)glm::radians(rotate.z), glm::vec3(0.0, 0.0, 1.0));
-		TR = glm::translate(TR, glm::vec3(-1 * pibot.x, -1 * pibot.y, -1 * pibot.z));
+		TR = glm::translate(TR, glm::vec3(-1 * pivot.x, -1 * pivot.y, -1 * pivot.z));
 
 		return TR;
 	}
@@ -118,8 +120,17 @@ public:
 	}
 };
 
-sidestate cubeside[6];
-sidestate pyramidside[4];
+typedef struct Circle_line {
+	float point[60][3];
+	float radian;
+	int radius;
+	float pivot;
+};
+
+Circle_line circle_line[3];
+int theta = 0;
+
+
 
 
 void RandRGB()
@@ -155,21 +166,11 @@ void main(int argc, char** argv)		//---윈도우 출력, 콜백함수 설정
 	{
 		std::cerr << "Unable to initialize GLEW" << std::endl;
 		exit(EXIT_FAILURE);
-	}
-	else
+	} else
 		std::cout << "GLEW initialized\n";
 
 	//glEnable(GL_DEPTH_TEST);
 	RandRGB();
-
-	//1,3 옆면, 2윗면, 5앞면
-	cubeside[2].SetPibot(0, HalfSizeOfCube, 0);
-	cubeside[5].SetPibot(0, -1 * HalfSizeOfCube, HalfSizeOfCube);
-
-	pyramidside[0].SetPibot(0, 0, -0.4);
-	pyramidside[1].SetPibot(-0.4, 0, 0);
-	pyramidside[2].SetPibot(0, 0, 0.4);
-	pyramidside[3].SetPibot(0.4, 0, 0);
 
 	InitShader();
 	InitBuffer();
@@ -246,13 +247,12 @@ GLvoid drawScene()
 		{
 			TR_cube = T_cube * Rx_cube * Ry_cube * S_cube;
 			TR_cube = cubeside[i].Translate(TR_cube);
-			TR_cube = cubeside[i].RotateAtPibot(TR_cube);
+			TR_cube = cubeside[i].RotateAtpivot(TR_cube);
 			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(TR_cube));
 
 			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * i * 6));
 		}
-	}
-	else
+	} else
 	{
 		glBindVertexArray(vao_pyramid);
 		TR_cube = T_cube * Rx_cube * Ry_cube * S_cube;
@@ -262,7 +262,7 @@ GLvoid drawScene()
 		{
 			TR_cube = T_cube * Rx_cube * Ry_cube * S_cube;
 			//TR_cube = cubeside[i].Translate(TR_cube);
-			TR_cube = pyramidside[i - 2].RotateAtPibot(TR_cube);
+			TR_cube = pyramidside[i - 2].RotateAtpivot(TR_cube);
 			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(TR_cube));
 			glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * i * 3));
 		}
@@ -437,88 +437,30 @@ void InitBuffer()
 
 }
 
+void circle_line_enter()
+{
+	circle_line[0].radius = 0.4f;
+	circle_line[0].radian = 0;
+
+}
+
+void draw_circle_line()
+{
+	for (int i = 0; i < 30; i++) {
+		circle_line[0].point[i][0] = circle_line[0].radius * cos(radians(circle_line[0].radian));
+		circle_line[0].point[i][1] = 0;
+		circle_line[0].point[i][2] = circle_line[0].radius * sin(radians(circle_line[0].radian));
+		circle_line[0].radian += 6;
+
+	}
+}
+
 
 bool FrontSideAinm_Open = true;
 GLfloat LeftRightSideAnimTrans = 0;
 
 GLvoid TimerFunction(int value)
 {
-	if (value == 0 && Y_rotating == true)
-	{
-		y_radian += 1.0f;
-		glutTimerFunc(10, TimerFunction, 0);
-	}
-	else if (value == 1 && UpSideAnim == true)
-	{
-		cubeside[2].PlusRotate(1.0f, 0.0, 0.0);
-		glutTimerFunc(10, TimerFunction, 1);
-	}
-	else if (value == 2 && FrontSideAnim != 0)
-	{
-		cubeside[5].PlusRotate((GLfloat)FrontSideAnim * 1.0, 0.0, 0.0);
-		if (cubeside[5].GetRotate().x >= 90.0f)
-		{
-			cubeside[5].SetRotate(90.0, 0.0, 0.0);
-			FrontSideAnim = 0;
-		}
-		else if (cubeside[5].GetRotate().x <= 0)
-		{
-			cubeside[5].SetRotate(0.0, 0.0, 0.0);
-			FrontSideAnim = 0;
-		}
-
-
-
-		glutTimerFunc(10, TimerFunction, 2);
-	}
-	else if (value == 3 && LeftRightSideAnim != 0)
-	{
-		cubeside[1].PlusTrans(0.0, (GLfloat)LeftRightSideAnim * 0.01, 0.0);
-		cubeside[3].PlusTrans(0.0, (GLfloat)LeftRightSideAnim * 0.01, 0.0);
-
-		if (cubeside[1].GetTrans().y >= 1.0f)
-		{
-			cubeside[1].SetTrans(0.0, 1.0, 0.0);
-			cubeside[3].SetTrans(0.0, 1.0, 0.0);
-
-			LeftRightSideAnim = 0;
-		}
-		else if (cubeside[1].GetTrans().y <= 0.0f)
-		{
-			cubeside[1].SetTrans(0.0, 0.0, 0.0);
-			cubeside[3].SetTrans(0.0, 0.0, 0.0);
-
-			LeftRightSideAnim = 0;
-		}
-
-		glutTimerFunc(10, TimerFunction, 3);
-	}
-	else if (value == 4 && OpenPyramid != 0)
-	{
-		pyramidside[0].PlusRotate((GLfloat)OpenPyramid * -1, 0.0, 0.0);
-		pyramidside[1].PlusRotate(0.0, 0.0, (GLfloat)OpenPyramid);
-		pyramidside[2].PlusRotate((GLfloat)OpenPyramid, 0.0, 0.0);
-		pyramidside[3].PlusRotate(0.0, 0.0, (GLfloat)OpenPyramid * -1);
-
-		if (pyramidside[2].GetRotate().x >= 233.0f)
-		{
-			pyramidside[0].SetRotate(-233.0f, 0.0, 0.0);
-			pyramidside[1].SetRotate(0.0, 0.0, 233.0f);
-			pyramidside[2].SetRotate(233.0f, 0.0, 0.0);
-			pyramidside[3].SetRotate(0.0, 0.0, -233.0f);
-			OpenPyramid = 0;
-		}
-		else if (pyramidside[2].GetRotate().x <= 0.0f)
-		{
-			pyramidside[0].SetRotate(0.0, 0.0, 0.0);
-			pyramidside[1].SetRotate(0.0, 0.0, 0.0);
-			pyramidside[2].SetRotate(0.0, 0.0, 0.0);
-			pyramidside[3].SetRotate(0.0, 0.0, 0.0);
-
-			OpenPyramid = 0;
-		}
-		glutTimerFunc(10, TimerFunction, 4);
-	}
 	glutPostRedisplay();
 }
 
@@ -528,84 +470,6 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 {
 	switch (key)
 	{
-	case 'h':
-		if (depthTest == true)
-		{
-			depthTest = false;
-			glDisable(GL_DEPTH_TEST);
-		}
-		else
-		{
-			depthTest = true;
-			glEnable(GL_DEPTH_TEST);
-		}
-		break;
-	case 'y':
-		if (Y_rotating == false)
-		{
-			Y_rotating = true;
-			glutTimerFunc(10, TimerFunction, 0);
-		}
-		else
-		{
-			Y_rotating = false;
-			y_radian = 0;
-		}
-		break;
-	case 't':
-		DrawPyramid = false;
-		if (UpSideAnim == false)
-		{
-			UpSideAnim = true;
-			glutTimerFunc(10, TimerFunction, 1);
-		}
-		break;
-	case 'T':
-		DrawPyramid = false;
-		UpSideAnim = false;
-		break;
-	case 'f':
-		DrawPyramid = false;
-		if (FrontSideAnim == 0)
-			glutTimerFunc(10, TimerFunction, 2);
-		FrontSideAnim = 1;
-		break;
-	case 'F':
-		DrawPyramid = false;
-		if (FrontSideAnim == 0)
-			glutTimerFunc(10, TimerFunction, 2);
-		FrontSideAnim = -1;
-		break;
-	case '1':
-		DrawPyramid = false;
-		if (LeftRightSideAnim == 0)
-			glutTimerFunc(10, TimerFunction, 3);
-		LeftRightSideAnim = 1;
-		break;
-	case '2':
-		DrawPyramid = false;
-		if (LeftRightSideAnim == 0)
-			glutTimerFunc(10, TimerFunction, 3);
-		LeftRightSideAnim = -1;
-		break;
-	case 'o':
-		DrawPyramid = true;
-		if (OpenPyramid == 0)
-			glutTimerFunc(10, TimerFunction, 4);
-		OpenPyramid = 1;
-		break;
-	case 'O':
-		DrawPyramid = true;
-		if (OpenPyramid == 0)
-			glutTimerFunc(10, TimerFunction, 4);
-		OpenPyramid = -1;
-		break;
-	case 'p':
-		ortho_anim = true;
-		break;
-	case 'P':
-		ortho_anim = false;
-		break;
 	case 'q':
 		glutDestroyWindow(windowID);
 		break;

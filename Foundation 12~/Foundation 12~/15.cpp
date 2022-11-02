@@ -7,12 +7,13 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
-//#include <gl/glm/glm.hpp>
-//#include <gl/glm/ext.hpp>
-//#include <gl/glm/gtc/matrix_transform.hpp>
-#include <gl/glm/glm/glm.hpp>
-#include <gl/glm/glm/ext.hpp>
-#include <gl/glm/glm/gtc/matrix_transform.hpp>
+//#include <gl/glm/glm/glm.hpp>
+//#include <gl/glm/glm/ext.hpp>
+//#include <gl/glm/glm/gtc/matrix_transform.hpp>
+#include <glm/glm/glm.hpp>
+#include <glm/glm/ext.hpp>
+#include <glm/glm/gtc/matrix_transform.hpp>
+
 
 using namespace glm;
 using namespace std;
@@ -68,7 +69,9 @@ int a = 0;
 
 int s_count = 0;
 GLfloat a_count = 1.f;
+GLfloat a_count2 = 1.f;
 GLfloat c_count = 1.f;
+GLfloat c_count2 = 1.f;
 
 bool plus_s = true;
 bool plus_a = true;
@@ -183,7 +186,7 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 	mat4 model = mat4(1.0f);  mat4 cube_model = mat4(1.f);
 	mat4 TR_CYC = mat4(1.f);  mat4 TR_CYC2 = mat4(1.f);
 	mat4 S_TR = mat4(1.f); mat4 S_TR2 = mat4(1.f);
-	mat4 SC1 = mat4(1.f); mat4 SC2 = mat4(1.f);
+	mat4 SC1 = mat4(1.f); mat4 SC2 = mat4(1.f); mat4 SC3 = mat4(1.f); mat4 SC4 = mat4(1.f);
 
 	model = rotate(model, radians(30.f), vec3(1.f, 0, 0));
 	model = rotate(model, radians(30.f), vec3(0, -1.f, 0));
@@ -206,6 +209,7 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 	}
 
 	SC1 = scale(SC1, vec3(a_count, a_count, a_count));
+	SC3 = scale(SC3, vec3(a_count2, a_count2, a_count2));
 
 	cout << s_count << endl;
 
@@ -213,7 +217,7 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 	unsigned int modelLocation = glGetUniformLocation(s_program, "modelTransform");
 	//--- modelTransform 변수에 변환 값 적용하기
 	//glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(RT2_1 * TR * RT * RT1 * model));
-	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model * TR_CYC * S_TR * SC1));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(SC3 * model * TR_CYC * S_TR * SC1));
 
 
 	glUniform3f(vColorLocation, 0, 0, 0);
@@ -247,8 +251,9 @@ GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 
 	}
 
 	SC2 = scale(SC2, vec3(c_count, c_count, c_count));
+	SC4 = scale(SC4, vec3(c_count2, c_count2, c_count2));
 
-	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(cube_model * TR_CYC2 * S_TR2 * SC2));
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(SC4 * cube_model * TR_CYC2 * S_TR2 * SC2));
 
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -440,16 +445,32 @@ void Keyboard(unsigned char key, int x, int y)
 		a_count += 0.1f;
 		break;
 
+	case 'A':
+		a_count2 += 0.1f;
+		break;
+
 	case 'b':
 		a_count -= 0.1f;
+		break;
+
+	case 'B':
+		a_count2 -= 0.1f;
 		break;
 
 	case 'c':
 		c_count += 0.1f;
 		break;
 
+	case 'C':
+		c_count2 += 0.1f;
+		break;
+
 	case 'd':
 		c_count -= 0.1f;
+		break;
+
+	case 'D':
+		c_count2 -= 0.1f;
 		break;
 
 	case 'q':
