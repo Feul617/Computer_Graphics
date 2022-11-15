@@ -1,0 +1,236 @@
+#include "AFX.h" 
+
+void main(int argc, char** argv) { //--- 윈도우 출력하고 콜백함수 설정 //--- 윈도우 생성하기
+	glutInit(&argc, argv); // glut 초기화
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH); // 디스플레이 모드 설정
+	glutInitWindowPosition(100, 100); // 윈도우의 위치 지정
+	glutInitWindowSize(WIDTH, HEIGHT); // 윈도우의 크기 지정
+	glutCreateWindow("Example1"); // 윈도우 생성
+
+	//--- GLEW 초기화하기
+	glewExperimental = GL_TRUE;
+	if (glewInit() != GLEW_OK) // glew 초기화
+	{
+		std::cerr << "Unable to initialize GLEW" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	else
+		std::cout << "GLEW Initialized\n";;
+
+	InitShader();
+	InitBuffer();
+
+	glutDisplayFunc(drawScene); // 출력 함수의 지정
+	glutReshapeFunc(Reshape); // 다시 그리기 함수 지정
+	glutKeyboardFunc(Keyboard);
+	glutMainLoop(); // 이벤트 처리 시작 }
+}
+
+GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 1.0f, 1.0f ); // 바탕색을 ‘blue’ 로 지정
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	int vColorLocation2 = glGetUniformLocation(s_program, "out_Color");
+	//--- 변경된 배경색 설정
+	glClearColor(rColor, gColor, bColor, 1.0f);
+
+
+	//--- 렌더링 파이프라인에 세이더 불러오기
+	glUseProgram(s_program);
+
+	//깊이 처리
+	glEnable(GL_DEPTH_TEST);
+
+	//glUseProgram(s_program);
+	int vColorLocation = glGetUniformLocation(s_program, "out_Color");
+
+	glUniform3f(vColorLocation, 0, 0, 0);
+
+	glutSwapBuffers(); //--- 화면에 출력하기
+}
+
+GLvoid Reshape(int w, int h) //--- 콜백 함수: 다시 그리기 콜백 함수 {
+{
+	glViewport(0, 0, w, h);
+}
+
+void make_vertexShader()
+{
+	vertexsource[0] = filetobuf("vertex.glsl");
+	vertexsource[1] = filetobuf("vertex_2d.glsl");
+
+	for (int i = 0; i < 2; i++)
+	{
+		//--- 버텍스 세이더 객체 만들기
+		vertexshader[i] = glCreateShader(GL_VERTEX_SHADER);
+
+		//--- 세이더 코드를 세이더 객체에 넣기
+		glShaderSource(vertexshader[i], 1, (const GLchar**)&vertexsource[i], 0);
+
+		//--- 버텍스 세이더 컴파일하기
+		glCompileShader(vertexshader[i]);
+
+		//--- 컴파일이 제대로 되지 않은 경우: 에러 체크
+		GLint result;
+		GLchar errorLog[512];
+		glGetShaderiv(vertexshader[i], GL_COMPILE_STATUS, &result);
+		if (!result)
+		{
+			glGetShaderInfoLog(vertexshader[i], 512, NULL, errorLog);
+			std::cerr << "ERROR: vertex shader 컴파일 실패\n" << errorLog << std::endl;
+			return;
+		}
+	}
+}
+
+void make_fragmentShader()
+{
+	for (int i = 0; i < 2; i++)
+	{
+		fragmentsource[i] = filetobuf("fragment.glsl");
+
+		//--- 프래그먼트 세이더 객체 만들기
+		fragmentshader[i] = glCreateShader(GL_FRAGMENT_SHADER);
+
+		//--- 세이더 코드를 세이더 객체에 넣기
+		glShaderSource(fragmentshader[i], 1, (const GLchar**)&fragmentsource[i], 0);
+
+		//--- 프래그먼트 세이더 컴파일
+		glCompileShader(fragmentshader[i]);
+
+		//--- 컴파일이 제대로 되지 않은 경우: 컴파일 에러 체크
+		GLint result;
+		GLchar errorLog[512];
+		glGetShaderiv(fragmentshader[i], GL_COMPILE_STATUS, &result);
+		if (!result)
+		{
+			glGetShaderInfoLog(fragmentshader[i], 512, NULL, errorLog);
+			std::cerr << "ERROR: fragment shader 컴파일 실패\n" << errorLog << std::endl;
+			return;
+		}
+	}
+}
+
+void InitBuffer()
+{
+	//큐브
+	FILE* fp;
+	fp = fopen("cube.obj", "rb");
+	ReadObj(fp, cube);
+
+	glGenVertexArrays(3, vao); //--- VAO 를 지정하고 할당하기
+	glGenBuffers(3, vbo); //--- 2개의 VBO를 지정하고 할당하기
+	glGenBuffers(1, ebo);
+
+	//--- attribute 인덱스 0번을 사용가능하게 함
+	glBindVertexArray(vao[0]);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+
+	glBufferData(GL_ARRAY_BUFFER, cube.faceNum * sizeof(GLfloat), cube.face, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+
+	glBindVertexArray(vao[1]);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(vec3), cube.vertex, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo[0]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 12 * sizeof(FACE), cube.face, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+
+}
+
+void InitShader()
+{
+	make_vertexShader(); //--- 버텍스 세이더 만들기
+	make_fragmentShader(); //--- 프래그먼트 세이더 만들기
+	//-- shader Program
+	s_program = glCreateProgram();
+	s_program_plat = glCreateProgram();
+
+	glAttachShader(s_program, vertexshader[0]);
+	glAttachShader(s_program, fragmentshader[0]);
+
+	glAttachShader(s_program_plat, vertexshader[1]);
+	glAttachShader(s_program_plat, fragmentshader[1]);
+
+	//--- 세이더 삭제하기
+	for (int i = 0; i < 2; i++)
+	{
+		glDeleteShader(vertexshader[i]);
+		glDeleteShader(fragmentshader[i]);
+	}
+
+	glLinkProgram(s_program);
+
+	// ---세이더가 잘 연결되었는지 체크하기
+	GLint result;
+	GLchar errorLog[512];
+	glGetProgramiv(s_program, GL_LINK_STATUS, &result);
+	if (!result) {
+		glGetProgramInfoLog(s_program, 512, NULL, errorLog);
+		std::cerr << "ERROR: shader program 연결 실패\n" << errorLog << std::endl;
+		return;
+	}
+
+	glLinkProgram(s_program_plat);
+
+	// ---세이더가 잘 연결되었는지 체크하기
+	glGetProgramiv(s_program_plat, GL_LINK_STATUS, &result);
+	if (!result) {
+		glGetProgramInfoLog(s_program_plat, 512, NULL, errorLog);
+		std::cerr << "ERROR: shader program 연결 실패\n" << errorLog << std::endl;
+		return;
+	}
+}
+
+void Keyboard(unsigned char key, int x, int y)
+{
+	switch (key)
+	{
+	case 'q':
+		glutLeaveMainLoop();
+		break;
+	}
+
+	glutPostRedisplay();
+}
+
+void ReadObj(FILE* objFile, READ& Read)
+{
+	//--- 1. 전체 버텍스 개수 및 삼각형 개수 세기
+	char count[100];
+	while (!feof(objFile)) {
+		fscanf(objFile, "%s", count);
+		if (count[0] == 'v' && count[1] == '\0')
+			Read.vertexNum += 1;
+		else if (count[0] == 'f' && count[1] == '\0')
+			Read.faceNum += 1;
+		memset(count, '\0', sizeof(count)); // 배열 초기화
+	}
+
+	//--- 2. 메모리 할당
+	int vertIndex = 0;
+	int faceIndex = 0;
+	rewind(objFile);
+	Read.vertex = (vec3*)malloc(sizeof(vec3) * Read.vertexNum);
+	Read.face = (FACE*)malloc(sizeof(FACE) * Read.faceNum);
+	//--- 3. 할당된 메모리에 각 버텍스, 페이스 정보 입력
+	while (!feof(objFile)) {
+		fscanf(objFile, "%s", count);
+		if (count[0] == 'v' && count[1] == '\0') {
+			fscanf(objFile, "%f %f %f",
+				&Read.vertex[vertIndex].x, &Read.vertex[vertIndex].y,
+				&Read.vertex[vertIndex].z);
+			vertIndex++;
+		}
+		else if (count[0] == 'f' && count[1] == '\0') {
+			fscanf(objFile, "%d %d %d",
+				&Read.face[faceIndex].a, &Read.face[faceIndex].b, &Read.face[faceIndex].c);
+			Read.face[faceIndex].a--; Read.face[faceIndex].b--; Read.face[faceIndex].c--;
+			faceIndex++;
+		}
+	}
+}
