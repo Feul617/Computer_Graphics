@@ -7,9 +7,12 @@
 #include <stdio.h>
 #include <random>
 #include <cassert>
-#include <gl/glm/glm/glm.hpp>
-#include <gl/glm/glm/ext.hpp>
-#include <gl/glm/glm/gtc/matrix_transform.hpp>
+//#include <gl/glm/glm/glm.hpp>
+//#include <gl/glm/glm/ext.hpp>
+//#include <gl/glm/glm/gtc/matrix_transform.hpp>
+#include <glm/glm/glm.hpp>
+#include <glm/glm/ext.hpp>
+#include <glm/glm/gtc/matrix_transform.hpp>
 #include "objReader.h"
 #include <cmath>
 
@@ -360,17 +363,17 @@ void InitBuffer()
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
 
-	obj objfile[3];
-	objfile[0].OpenFile("cube_18_1.obj");
-	objfile[1].OpenFile("cube_18_2.obj");
-	objfile[2].OpenFile("cube_18_3.obj");
+	//obj objfile[3];
+	//objfile[0].OpenFile("cube_18_1.obj");
+	//objfile[1].OpenFile("cube_18_2.obj");
+	//objfile[2].OpenFile("cube_18_3.obj");
 
 
 
-	for (int i = 0; i < 3; i++)
-	{
-		objfile[i].ReadObj();
-	}
+	//for (int i = 0; i < 3; i++)
+	//{
+	//	objfile[i].ReadObj();
+	//}
 }
 
 

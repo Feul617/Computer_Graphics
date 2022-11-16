@@ -32,6 +32,9 @@
     <Object Include="pyramid_16.obj">
       <Filter>리소스 파일</Filter>
     </Object>
+    <Object Include="cube_18_1.obj">
+      <Filter>리소스 파일</Filter>
+    </Object>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="file.h">

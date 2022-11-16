@@ -8,9 +8,12 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
-#include <gl/glm/glm/glm.hpp>
-#include <gl/glm/glm/ext.hpp>
-#include <gl/glm/glm/gtc/matrix_transform.hpp>
+//#include <gl/glm/glm/glm.hpp>
+//#include <gl/glm/glm/ext.hpp>
+//#include <gl/glm/glm/gtc/matrix_transform.hpp>
+#include <glm/glm/glm.hpp>
+#include <glm/glm/ext.hpp>
+#include <glm/glm/gtc/matrix_transform.hpp>
 
 using namespace glm;
 using namespace std;
@@ -43,7 +46,7 @@ typedef struct READ {
 //º¯¼ö
 GLchar* vertexsource[2], * fragmentsource[2];
 GLuint vertexshader[2], fragmentshader[2], vao[3], vbo[3], ebo[1];
-GLuint s_program, s_program_plat, shaderID;
+GLuint s_program, s_program_floor, shaderID;
 GLfloat rColor = 1.f, bColor = 1.f, gColor = 1.f;
 GLint result;
 GLchar errorLog[512];
@@ -64,3 +67,5 @@ void InitShader();
 void ReadObj(FILE* objFile, READ& Read);
 
 void Keyboard(unsigned char key, int x, int y);
+
+

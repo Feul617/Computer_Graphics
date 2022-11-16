@@ -29,23 +29,22 @@ void main(int argc, char** argv) { //--- 윈도우 출력하고 콜백함수 설정 //--- 윈�
 
 GLvoid drawScene()//--- 콜백 함수: 그리기 콜백 함수 { glClearColor( 0.0f, 0.0f, 1.0f, 1.0f ); // 바탕색을 ‘blue’ 로 지정
 {
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	int vColorLocation2 = glGetUniformLocation(s_program, "out_Color");
-	//--- 변경된 배경색 설정
-	glClearColor(rColor, gColor, bColor, 1.0f);
+	//---카메라 설정
+	glm::vec4 cameraPos_trans(0.0f, 0.0f, 0.0f, 1.0f);
+	glm::vec4 cameraDirection_trans(0.0f, -3.0f, -5.0f, 1.0f);
 
+	glm::vec3 cameraPos = glm::vec3(cameraPos_trans.x, cameraPos_trans.y, cameraPos_trans.z);		 //--- 카메라 위치
+	glm::vec3 cameraDirection = glm::vec3(cameraDirection_trans.x, cameraDirection_trans.y, cameraDirection_trans.z); //--- 카메라 바라보는 방향
+	glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);		 //--- 카메라 위쪽 방향
+	glm::mat4 view = glm::mat4(1.0f);
 
-	//--- 렌더링 파이프라인에 세이더 불러오기
-	glUseProgram(s_program);
+	view = glm::lookAt(cameraPos, cameraDirection, cameraUp);
+	unsigned int viewLoc_shape = glGetUniformLocation(s_program, "view"); //--- 뷰잉 변환 설정
+	unsigned int viewLoc_floor = glGetUniformLocation(s_program_floor, "view"); //--- 뷰잉 변환 설정
 
-	//깊이 처리
-	glEnable(GL_DEPTH_TEST);
-
-	//glUseProgram(s_program);
-	int vColorLocation = glGetUniformLocation(s_program, "out_Color");
-
-	glUniform3f(vColorLocation, 0, 0, 0);
 
 	glutSwapBuffers(); //--- 화면에 출력하기
 }
@@ -58,7 +57,7 @@ GLvoid Reshape(int w, int h) //--- 콜백 함수: 다시 그리기 콜백 함수 {
 void make_vertexShader()
 {
 	vertexsource[0] = filetobuf("vertex.glsl");
-	vertexsource[1] = filetobuf("vertex_2d.glsl");
+	vertexsource[1] = filetobuf("vertex_floor.glsl");
 
 	for (int i = 0; i < 2; i++)
 	{
@@ -86,9 +85,12 @@ void make_vertexShader()
 
 void make_fragmentShader()
 {
+	fragmentsource[0] = filetobuf("fragment.glsl");
+	fragmentsource[1] = filetobuf("fragment_floor.glsl");
+
+	
 	for (int i = 0; i < 2; i++)
 	{
-		fragmentsource[i] = filetobuf("fragment.glsl");
 
 		//--- 프래그먼트 세이더 객체 만들기
 		fragmentshader[i] = glCreateShader(GL_FRAGMENT_SHADER);
@@ -175,7 +177,7 @@ void InitShader()
 		return;
 	}
 
-	glLinkProgram(s_program_plat);
+	glLinkProgram(s_program_floor);
 
 	// ---세이더가 잘 연결되었는지 체크하기
 	glGetProgramiv(s_program_plat, GL_LINK_STATUS, &result);

@@ -5,9 +5,12 @@
 #include <gl/freeglut_ext.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <gl/glm/glm/glm.hpp>
-#include <gl/glm/glm/ext.hpp>
-#include <gl/glm/glm/gtc/matrix_transform.hpp>
+//#include <gl/glm/glm/glm.hpp>
+//#include <gl/glm/glm/ext.hpp>
+//#include <gl/glm/glm/gtc/matrix_transform.hpp>
+#include <glm/glm/glm.hpp>
+#include <glm/glm/ext.hpp>
+#include <glm/glm/gtc/matrix_transform.hpp>
 #pragma once
 struct obj
 {
