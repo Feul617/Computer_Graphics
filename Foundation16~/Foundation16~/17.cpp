@@ -1,31 +1,33 @@
+ï»¿#define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
 #include <gl/glew.h>
 #include <gl/freeglut.h>
 #include <gl/freeglut_ext.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 #include <random>
 #include <cassert>
-#include <glm/glm/glm.hpp>
-#include <glm/glm/ext.hpp>
-#include <glm/glm/gtc/matrix_transform.hpp>
-#include "file.h"
+#include <gl/glm/glm/glm.hpp>
+#include <gl/glm/glm/ext.hpp>
+#include <gl/glm/glm/gtc/matrix_transform.hpp>
 #include "objReader.h"
 #include <cmath>
 
 using namespace std;
-using namespace glm;
 
-//---À©µµ¿ì »çÀÌÁî º¯¼ö
+//---ìœˆë„ìš° ì‚¬ì´ì¦ˆ ë³€ìˆ˜
 int WinSize_r = 1000;
 int WinSize_w = 1000;
-int windowID;		//---À©µµ¿ì ¾ÆÀÌµğ
+int windowID;		//---ìœˆë„ìš° ì•„ì´ë””
 
-//---Äİ¹é ÇÔ¼ö
+//---ì‚¬ìš©ì ì •ì˜ í•¨ìˆ˜
+GLfloat* MakeCircle(GLfloat radius, int spotcount);
+
+//---ì½œë°± í•¨ìˆ˜
 GLvoid drawScene(GLvoid);
 GLvoid Reshape(int w, int h);
 GLvoid Keyboard(unsigned char key, int x, int y);
+GLvoid TimerFunction(int value);
 
 //---glsl
 void make_vertexShader();
@@ -33,105 +35,35 @@ void make_fragmentShader();
 void InitShader();
 void InitBuffer();
 char* filetobuf(const char* file);
-GLchar* vertexsource[2], * fragmentsource[2];		//---¼Ò½ºÄÚµå ÀúÀå º¯¼ö
-GLuint vertexshader[2], fragmentshader[2];		//---¼¼ÀÌ´õ °´Ã¼
-GLuint vao, vao_pyramid;
-GLuint vbo[2], vbo_pyramid[3];
-GLuint ebo, ebo_pyramid;
-//---½¦ÀÌ´õ ÇÁ·Î±×·¥
+GLchar* vertexsource, * fragmentsource;		//---ì†ŒìŠ¤ì½”ë“œ ì €ì¥ ë³€ìˆ˜
+GLuint vertexshader, fragmentshader;		//---ì„¸ì´ë” ê°ì²´
+GLuint vao;
+GLuint vbo;
+//---ì‰ì´ë” í”„ë¡œê·¸ë¨
 GLuint s_program;
-GLuint s_program_line;
 
-//--À°¸éÃ¼ »ö
-GLfloat cubeColor[24];
-GLfloat pyramidColor[15];
+//---êµ¬ ëª¨ë¸
+GLUquadricObj* qobj;
 
-GLfloat HalfSizeOfCube = 0.5f;
+//---bool ë³€ìˆ˜
+bool isOrtho = false;
+int IsRotate = 0;
 
-//--¾Ö´Ï¸ŞÀÌ¼Ç Àç»ı
-bool Y_rotating = false;
-bool UpSideAnim = false;
-int FrontSideAnim = 0;
-int LeftRightSideAnim = 0;
-bool DrawPyramid = false;
-int OpenPyramid = 0;
-bool ortho_anim = false;
+//---ì› vertex
+int spotcount = 1000;		//ì›ì˜ ì  ê°œìˆ˜
+GLfloat* circle_vertex = NULL;
 
-//---ÀÚÀü È¸Àü 
-GLfloat y_radian = 0;
-bool depthTest = true;
+int Smodel_index[3] = { 0, 50, 150 };
+int Smodel2_index[3] = { 5,12,15 };
+GLfloat Circle_Radian[3] = { 0,-45,45 };
 
-//---°¢ ¸é Á¤º¸ Å¬·¡½º
-class Object
-{
-public:
-	glm::vec3 trans;
-	glm::vec3 rotate;
-	glm::vec3 pivot;
+//---í–‰ì„± ìƒ‰
+glm::vec3 middle_sphere_color[3];
+glm::vec3 small_sphere_color[3];
 
-	Object()
-	{
-		trans.x = 0.0; trans.y = 0.0; trans.z = 0.0;
-		rotate.x = 0.0; rotate.y = 0.0; rotate.z = 0.0;
-		pivot.x = 0.0; pivot.y = 0.0; pivot.z = 0.0;
-	}
-	//---¸â¹öº¯¼ö SET
-	void PlusTrans(GLfloat x, GLfloat y, GLfloat z)
-	{
-		trans.x += x; trans.y += y; trans.z += z;
-	}
-	void SetTrans(GLfloat x, GLfloat y, GLfloat z)
-	{
-		trans.x = x; trans.y = y; trans.z = z;
-	}
-	void PlusRotate(GLfloat x, GLfloat y, GLfloat z)
-	{
-		rotate.x += x; rotate.y += y; rotate.z += z;
-	}
-	void SetRotate(GLfloat x, GLfloat y, GLfloat z)
-	{
-		rotate.x = x; rotate.y = y; rotate.z = z;
-	}
-	void Setpivot(GLfloat x, GLfloat y, GLfloat z)
-	{
-		pivot.x = x; pivot.y = y; pivot.z = z;
-	}
-
-	//---¸â¹öº¯¼ö GET
-	glm::vec3 GetTrans() { return trans; }
-	glm::vec3 GetRotate() { return rotate; }
-	glm::vec3 Getpivot() { return pivot; }
-
-	glm::mat4 RotateAtpivot(glm::mat4 TR)
-	{
-		TR = glm::translate(TR, glm::vec3(pivot.x, pivot.y, pivot.z));
-		TR = glm::rotate(TR, (GLfloat)glm::radians(rotate.x), glm::vec3(1.0, 0.0, 0.0));
-		TR = glm::rotate(TR, (GLfloat)glm::radians(rotate.y), glm::vec3(0.0, 1.0, 0.0));
-		TR = glm::rotate(TR, (GLfloat)glm::radians(rotate.z), glm::vec3(0.0, 0.0, 1.0));
-		TR = glm::translate(TR, glm::vec3(-1 * pivot.x, -1 * pivot.y, -1 * pivot.z));
-
-		return TR;
-	}
-	glm::mat4 Translate(glm::mat4 TR)
-	{
-		TR = glm::translate(TR, glm::vec3(trans.x, trans.y, trans.z));
-
-		return TR;
-	}
-};
-
-typedef struct Circle_line {
-	float point[60][3];
-	float radian;
-	int radius;
-	float pivot;
-};
-
-Circle_line circle_line[3];
-int theta = 0;
-
-
-
+//---ê°€ìš´ë° êµ¬ ëª¨ë¸ë§ ê°’
+glm::vec3 BigSphere_trans = glm::vec3(0.0, 0.0, 0.0);
+GLfloat BigSphere_rotate = 0.0;
 
 void RandRGB()
 {
@@ -139,137 +71,193 @@ void RandRGB()
 	std::default_random_engine eng(rd());
 	std::uniform_real_distribution<GLclampf> rd_RGB(0.0, 1.0f);
 
-	for (int i = 0; i < 24; i++)
+	for (int i = 0; i < 3; i++)
 	{
-		cubeColor[i] = rd_RGB(eng);
-	}
-	for (int i = 0; i < 15; i++)
-	{
-		pyramidColor[i] = rd_RGB(eng);
+		middle_sphere_color[i] = glm::vec3(rd_RGB(eng), rd_RGB(eng), rd_RGB(eng));
+		small_sphere_color[i] = glm::vec3(rd_RGB(eng), rd_RGB(eng), rd_RGB(eng));
 	}
 }
 
 
-int side = 0;
-void main(int argc, char** argv)		//---À©µµ¿ì Ãâ·Â, Äİ¹éÇÔ¼ö ¼³Á¤
+GLfloat* MakeCircle(GLfloat radius, int spotcount)
 {
-	//---À©µµ¿ì »ı¼º
-	glutInit(&argc, argv);		//glutÃÊ±âÈ­
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);	//µğ½ºÇÃ·¹ÀÌ ¸ğµå ¼³Á¤
-	glutInitWindowPosition(0, 0);					//À©µµ¿ì À§Ä¡ ÁöÁ¤
-	glutInitWindowSize(WinSize_r, WinSize_w);					//À©µµ¿ì Å©±â ÁöÁ¤
-	windowID = glutCreateWindow("Example1");					//À©µµ¿ì »ı¼º
+	double PI = 3.141592;
+	GLfloat x = 0;
+	GLfloat z = 0;
 
-	//---GLEW ÃÊ±âÈ­
+	GLfloat seta = 0;
+
+	GLfloat* arr = new GLfloat[spotcount * 3];
+	GLfloat distance_s = 360.0 / spotcount;
+	double radian = seta * (PI / 180);
+
+	for (int i = 0; i < spotcount * 3; i++)
+	{
+		if (i % 3 == 0)				//xì¢Œí‘œ
+		{
+			arr[i] = x + radius * cos(radian);
+		}
+		else if (i % 3 == 1)		//yì¢Œí‘œ
+		{
+			arr[i] = 0.0f;
+		}
+		else if (i % 3 == 2)		//zì¢Œí‘œ
+		{
+			arr[i] = (z + radius * sin(radian));
+			seta += distance_s;
+			radian = seta * (PI / 180);
+		}
+		cout << arr[i] << ", ";
+		if (i % 3 == 2) cout << endl;
+	}
+	return arr;
+}
+
+
+void main(int argc, char** argv)		//---ìœˆë„ìš° ì¶œë ¥, ì½œë°±í•¨ìˆ˜ ì„¤ì •
+{
+	//---ìœˆë„ìš° ìƒì„±
+	glutInit(&argc, argv);		//glutì´ˆê¸°í™”
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);	//ë””ìŠ¤í”Œë ˆì´ ëª¨ë“œ ì„¤ì •
+	glutInitWindowPosition(0, 0);					//ìœˆë„ìš° ìœ„ì¹˜ ì§€ì •
+	glutInitWindowSize(WinSize_r, WinSize_w);					//ìœˆë„ìš° í¬ê¸° ì§€ì •
+	windowID = glutCreateWindow("Example1");					//ìœˆë„ìš° ìƒì„±
+
+	//---GLEW ì´ˆê¸°í™”
 	glewExperimental = GL_TRUE;
-	if (glewInit() != GLEW_OK)		//glew ÃÊ±âÈ­¿¡ ½ÇÆĞÇÒ °æ¿ì
+	if (glewInit() != GLEW_OK)		//glew ì´ˆê¸°í™”ì— ì‹¤íŒ¨í•  ê²½ìš°
 	{
 		std::cerr << "Unable to initialize GLEW" << std::endl;
 		exit(EXIT_FAILURE);
-	} else
+	}
+	else
 		std::cout << "GLEW initialized\n";
 
-	//glEnable(GL_DEPTH_TEST);
-	RandRGB();
 
+	if (circle_vertex != NULL) delete circle_vertex;
+	circle_vertex = MakeCircle(5.0f, spotcount);
+
+
+	RandRGB();
 	InitShader();
 	InitBuffer();
+
+	qobj = gluNewQuadric(); // ê°ì²´ ìƒì„±í•˜ê¸°
+	gluQuadricDrawStyle(qobj, GLU_FILL); // ë„í˜• ìŠ¤íƒ€ì¼
+	gluQuadricNormals(qobj, GLU_SMOOTH); //ïƒ  ìƒëµ ê°€ëŠ¥
+	gluQuadricOrientation(qobj, GLU_OUTSIDE);
+
+	glEnable(GL_DEPTH_TEST);
+
 
 	glutDisplayFunc(drawScene);
 	glutReshapeFunc(Reshape);
 	glutKeyboardFunc(Keyboard);
+	glutTimerFunc(10, TimerFunction, 0);
 
 	glutMainLoop();
 }
 GLvoid drawScene()
 {
-	cout << "draw" << endl;
-	//---¹è°æ ÃÊ±âÈ­
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	//---ë°°ê²½ ì´ˆê¸°í™”
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	//---Ä«¸Ş¶ó ¼³Á¤
-	glm::vec3 cameraPos = glm::vec3(-0.5f, 0.5f, 1.0f);		 //--- Ä«¸Ş¶ó À§Ä¡
-	glm::vec3 cameraDirection = glm::vec3(0.0f, 0.0f, 0.0f); //--- Ä«¸Ş¶ó ¹Ù¶óº¸´Â ¹æÇâ
-	glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);		 //--- Ä«¸Ş¶ó À§ÂÊ ¹æÇâ
+	//---ì¹´ë©”ë¼ ì„¤ì •
+	glm::vec3 cameraPos = glm::vec3(0.0f, -1.2f, 14.0f);		 //--- ì¹´ë©”ë¼ ìœ„ì¹˜
+	glm::vec3 cameraDirection = glm::vec3(0.0f, 0.0f, 0.0f); //--- ì¹´ë©”ë¼ ë°”ë¼ë³´ëŠ” ë°©í–¥
+	glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);		 //--- ì¹´ë©”ë¼ ìœ„ìª½ ë°©í–¥
 	glm::mat4 view = glm::mat4(1.0f);
 
 	view = glm::lookAt(cameraPos, cameraDirection, cameraUp);
-	unsigned int viewLoc_shape = glGetUniformLocation(s_program, "view"); //--- ºäÀ× º¯È¯ ¼³Á¤
-	unsigned int viewLoc_line = glGetUniformLocation(s_program_line, "view"); //--- ºäÀ× º¯È¯ ¼³Á¤
+	unsigned int viewLoc_shape = glGetUniformLocation(s_program, "view"); //--- ë·°ì‰ ë³€í™˜ ì„¤ì •
 
-	//---Åõ¿µº¯È¯
+	//---íˆ¬ì˜ë³€í™˜
 	glm::mat4 projection = glm::mat4(1.0f);
-	if (ortho_anim == true)
-		projection = glm::ortho(-2.0f, 2.0f, -2.0f, 2.0f, -2.0f, 2.0f);
+	if (isOrtho == true)
+		projection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, -5.0f, 50.0f);
 	else
 	{
 		projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 50.0f);
-		projection = glm::translate(projection, glm::vec3(0.0, 0.0, -5.0)); //--- °ø°£À» ¾à°£ µÚ·Î ¹Ì·ïÁÜ
+		projection = glm::translate(projection, glm::vec3(0.0, 0.0, -5.0)); //--- ê³µê°„ì„ ì•½ê°„ ë’¤ë¡œ ë¯¸ë¤„ì¤Œ
 	}
 
 
 	unsigned int projLoc_shape = glGetUniformLocation(s_program, "projection");
-	unsigned int projLoc_line = glGetUniformLocation(s_program_line, "projection");
-
-	//-------------¼± ±×¸®±â
-	glUseProgram(s_program_line);
-	glUniformMatrix4fv(viewLoc_line, 1, GL_FALSE, &view[0][0]);
-	glUniformMatrix4fv(projLoc_line, 1, GL_FALSE, &projection[0][0]);
-	glPointSize(10.0);
-	glDrawArrays(GL_LINES, 0, 6);
-	glDrawArrays(GL_POINTS, 0, 6);
 
 
 
-	//---------- À°¸éÃ¼ ±×¸®±â(¿ì)
+	//---------- êµ¬ ê·¸ë¦¬ê¸°
 	glUseProgram(s_program);
 	glUniformMatrix4fv(viewLoc_shape, 1, GL_FALSE, &view[0][0]);
 	glUniformMatrix4fv(projLoc_shape, 1, GL_FALSE, &projection[0][0]);
 
+	int vColorLocation = glGetUniformLocation(s_program, "vColor");
 	unsigned int modelLoc = glGetUniformLocation(s_program, "model");
 
-	glm::mat4 TR_cube = glm::mat4(1.0f);
-	glm::mat4 T_cube = glm::mat4(1.0f);
-	glm::mat4 Rx_cube = glm::mat4(1.0f);
-	glm::mat4 Ry_cube = glm::mat4(1.0f);
-	glm::mat4 S_cube = glm::mat4(1.0f);
-	glm::mat4 OS_cube = glm::mat4(1.0f);
+	glm::mat4 Model_sphere = glm::mat4(1.0f);
 
-	T_cube = glm::translate(T_cube, glm::vec3(0, 0, 0));
-	Rx_cube = glm::rotate(Rx_cube, (GLfloat)glm::radians(0.0), glm::vec3(1.0, 0.0, 0.0));
-	Ry_cube = glm::rotate(Ry_cube, (GLfloat)glm::radians(y_radian), glm::vec3(0.0, 1.0, 0.0));
-	S_cube = glm::scale(S_cube, glm::vec3(1.0, 1.0, 1.0));
-	if (DrawPyramid == false)
+	Model_sphere = glm::translate(Model_sphere, glm::vec3(BigSphere_trans.x, BigSphere_trans.y, BigSphere_trans.z));
+	Model_sphere = glm::rotate(Model_sphere, (GLfloat)glm::radians(0.0), glm::vec3(1.0, 0.0, 0.0));
+	Model_sphere = glm::rotate(Model_sphere, (GLfloat)glm::radians(BigSphere_rotate), glm::vec3(0.0, 1.0, 0.0));
+	Model_sphere = glm::rotate(Model_sphere, (GLfloat)glm::radians(0.0), glm::vec3(0.0, 0.0, 1.0));
+	Model_sphere = glm::scale(Model_sphere, glm::vec3(1.0, 1.0, 1.0));
+
+	glUniform4f(vColorLocation, 0.0f, 0.0f, 1.0f, 1.0f);
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(Model_sphere));
+	gluSphere(qobj, 1.5, 50, 50);
+	//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * 0 * 6));
+
+	//-------------------------------------------------ì› ê·¸ë¦¬ê¸°(í‰ë©´)-------------------------------------------------------
+
+
+
+	for (int i = 0; i < 3; i++)
 	{
+		glm::mat4 Model_circleline1 = glm::mat4(1.0f);
+		Model_circleline1 = glm::translate(Model_circleline1, glm::vec3(0, 0, 0));
+		Model_circleline1 = glm::rotate(Model_circleline1, (GLfloat)glm::radians(Circle_Radian[i]), glm::vec3(0.0, 0.0, 1.0));
+		Model_circleline1 = glm::scale(Model_circleline1, glm::vec3(1.0, 1.0, 1.0));
+		Model_circleline1 = Model_sphere * Model_circleline1;
+		glUniform4f(vColorLocation, 0.0f, 0.0f, 0.0f, 1.0f);
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(Model_circleline1));
+
 		glBindVertexArray(vao);
-		for (int i = 0; i < 6; i++)
-		{
-			TR_cube = T_cube * Rx_cube * Ry_cube * S_cube;
-			TR_cube = cubeside[i].Translate(TR_cube);
-			TR_cube = cubeside[i].RotateAtpivot(TR_cube);
-			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(TR_cube));
+		glDrawArrays(GL_LINE_STRIP, 0, spotcount);
 
-			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * i * 6));
-		}
-	} else
-	{
-		glBindVertexArray(vao_pyramid);
-		TR_cube = T_cube * Rx_cube * Ry_cube * S_cube;
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(TR_cube));
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * 0));
-		for (int i = 2; i < 6; i++)
-		{
-			TR_cube = T_cube * Rx_cube * Ry_cube * S_cube;
-			//TR_cube = cubeside[i].Translate(TR_cube);
-			TR_cube = pyramidside[i - 2].RotateAtpivot(TR_cube);
-			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(TR_cube));
-			glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * i * 3));
-		}
+		//--------êµ¬(ì› ìœ„ ì¤‘ê°„ êµ¬)
 
+		glm::vec4 OnCircle = glm::vec4(circle_vertex[Smodel_index[i] * 3], circle_vertex[Smodel_index[i] * 3 + 1], circle_vertex[Smodel_index[i] * 3 + 2], 1.0f);
+		glm::mat4 Model_sphere_inlargeline = glm::mat4(1.0f);
+		Model_sphere_inlargeline = glm::translate(Model_sphere_inlargeline, glm::vec3(OnCircle.x, OnCircle.y, OnCircle.z));
+		Model_sphere_inlargeline = glm::scale(Model_sphere_inlargeline, glm::vec3(0.3, 0.3, 0.3));
+		Model_sphere_inlargeline = Model_circleline1 * Model_sphere_inlargeline;
+		glUniform4f(vColorLocation, middle_sphere_color[i].x, middle_sphere_color[i].y, middle_sphere_color[i].z, 1.0f);
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(Model_sphere_inlargeline));
+		gluSphere(qobj, 1.5, 50, 50);
+
+		glm::mat4 Model_circle_smallline1 = glm::mat4(1.0f);
+		Model_circle_smallline1 = glm::rotate(Model_circle_smallline1, (GLfloat)glm::radians(-1 * Circle_Radian[i]), glm::vec3(0.0, 0.0, 1.0));
+		Model_circle_smallline1 = Model_sphere_inlargeline * Model_circle_smallline1;
+		glUniform4f(vColorLocation, 0.0f, 0.0f, 0.0f, 1.0f);
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(Model_circle_smallline1));
+
+		glBindVertexArray(vao);
+		glDrawArrays(GL_LINE_STRIP, 0, spotcount);
+
+		//--------ê°€ì¥ ì‘ì€ êµ¬
+
+		//glm::vec4 OnCircle2 = Model_circle_smallline1 * glm::vec4(circle_vertex[Smodel2_index[i] * 3], circle_vertex[Smodel2_index[i] * 3 + 1], circle_vertex[Smodel2_index[i] * 3 + 2], 1.0f);
+		glm::vec4 OnCircle2 = glm::vec4(circle_vertex[Smodel2_index[i] * 3], circle_vertex[Smodel2_index[i] * 3 + 1], circle_vertex[Smodel2_index[i] * 3 + 2], 1.0f);
+		glm::mat4 Model_sphere_insmallline = glm::mat4(1.0f);
+		Model_sphere_insmallline = glm::translate(Model_sphere_insmallline, glm::vec3(OnCircle2.x, OnCircle2.y, OnCircle2.z));
+		Model_sphere_insmallline = glm::scale(Model_sphere_insmallline, glm::vec3(0.5, 0.5, 0.5));
+		Model_sphere_insmallline = Model_circle_smallline1 * Model_sphere_insmallline;
+		glUniform4f(vColorLocation, small_sphere_color[i].x, small_sphere_color[i].y, small_sphere_color[i].z, 1.0f);
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(Model_sphere_insmallline));
+		gluSphere(qobj, 1.5, 50, 50);
 	}
 
-	glBindVertexArray(0);
 
 	glutSwapBuffers();
 }
@@ -282,176 +270,106 @@ GLvoid Reshape(int w, int h)
 
 void make_vertexShader()
 {
-	vertexsource[0] = filetobuf("vertex_shape.glsl");
-	vertexsource[1] = filetobuf("vertex_line.glsl");
+	vertexsource = filetobuf("vertex.glsl");
 
-	for (int i = 0; i < 2; i++)
+	//--- ë²„í…ìŠ¤ ì„¸ì´ë” ê°ì²´ ë§Œë“¤ê¸°
+	vertexshader = glCreateShader(GL_VERTEX_SHADER);
+
+	//--- ì„¸ì´ë” ì½”ë“œë¥¼ ì„¸ì´ë” ê°ì²´ì— ë„£ê¸°
+	glShaderSource(vertexshader, 1, (const GLchar**)&vertexsource, 0);
+
+	//--- ë²„í…ìŠ¤ ì„¸ì´ë” ì»´íŒŒì¼í•˜ê¸°
+	glCompileShader(vertexshader);
+
+	//--- ì»´íŒŒì¼ì´ ì œëŒ€ë¡œ ë˜ì§€ ì•Šì€ ê²½ìš°: ì—ëŸ¬ ì²´í¬
+	GLint result;
+	GLchar errorLog[512];
+	glGetShaderiv(vertexshader, GL_COMPILE_STATUS, &result);
+	if (!result)
 	{
-		//--- ¹öÅØ½º ¼¼ÀÌ´õ °´Ã¼ ¸¸µé±â
-		vertexshader[i] = glCreateShader(GL_VERTEX_SHADER);
-
-		//--- ¼¼ÀÌ´õ ÄÚµå¸¦ ¼¼ÀÌ´õ °´Ã¼¿¡ ³Ö±â
-		glShaderSource(vertexshader[i], 1, (const GLchar**)&vertexsource[i], 0);
-
-		//--- ¹öÅØ½º ¼¼ÀÌ´õ ÄÄÆÄÀÏÇÏ±â
-		glCompileShader(vertexshader[i]);
-
-		//--- ÄÄÆÄÀÏÀÌ Á¦´ë·Î µÇÁö ¾ÊÀº °æ¿ì: ¿¡·¯ Ã¼Å©
-		GLint result;
-		GLchar errorLog[512];
-		glGetShaderiv(vertexshader[i], GL_COMPILE_STATUS, &result);
-		if (!result)
-		{
-			glGetShaderInfoLog(vertexshader[i], 512, NULL, errorLog);
-			std::cerr << "ERROR: vertex shader ÄÄÆÄÀÏ ½ÇÆĞ\n" << errorLog << std::endl;
-			return;
-		}
+		glGetShaderInfoLog(vertexshader, 512, NULL, errorLog);
+		std::cerr << "ERROR: vertex shader ì»´íŒŒì¼ ì‹¤íŒ¨\n" << errorLog << std::endl;
+		return;
 	}
 
 }
 void make_fragmentShader()
 {
-	fragmentsource[0] = filetobuf("fragment_shape.glsl");
-	fragmentsource[1] = filetobuf("fragment_line.glsl");
+	fragmentsource = filetobuf("fragment.glsl");
 
-	for (int i = 0; i < 2; i++)
+
+	//--- í”„ë˜ê·¸ë¨¼íŠ¸ ì„¸ì´ë” ê°ì²´ ë§Œë“¤ê¸°
+	fragmentshader = glCreateShader(GL_FRAGMENT_SHADER);
+
+	//--- ì„¸ì´ë” ì½”ë“œë¥¼ ì„¸ì´ë” ê°ì²´ì— ë„£ê¸°
+	glShaderSource(fragmentshader, 1, (const GLchar**)&fragmentsource, 0);
+
+	//--- í”„ë˜ê·¸ë¨¼íŠ¸ ì„¸ì´ë” ì»´íŒŒì¼
+	glCompileShader(fragmentshader);
+
+	//--- ì»´íŒŒì¼ì´ ì œëŒ€ë¡œ ë˜ì§€ ì•Šì€ ê²½ìš°: ì»´íŒŒì¼ ì—ëŸ¬ ì²´í¬
+	GLint result;
+	GLchar errorLog[512];
+	glGetShaderiv(fragmentshader, GL_COMPILE_STATUS, &result);
+	if (!result)
 	{
-
-		//--- ÇÁ·¡±×¸ÕÆ® ¼¼ÀÌ´õ °´Ã¼ ¸¸µé±â
-		fragmentshader[i] = glCreateShader(GL_FRAGMENT_SHADER);
-
-		//--- ¼¼ÀÌ´õ ÄÚµå¸¦ ¼¼ÀÌ´õ °´Ã¼¿¡ ³Ö±â
-		glShaderSource(fragmentshader[i], 1, (const GLchar**)&fragmentsource[i], 0);
-
-		//--- ÇÁ·¡±×¸ÕÆ® ¼¼ÀÌ´õ ÄÄÆÄÀÏ
-		glCompileShader(fragmentshader[i]);
-
-		//--- ÄÄÆÄÀÏÀÌ Á¦´ë·Î µÇÁö ¾ÊÀº °æ¿ì: ÄÄÆÄÀÏ ¿¡·¯ Ã¼Å©
-		GLint result;
-		GLchar errorLog[512];
-		glGetShaderiv(fragmentshader[i], GL_COMPILE_STATUS, &result);
-		if (!result)
-		{
-			glGetShaderInfoLog(fragmentshader[i], 512, NULL, errorLog);
-			std::cerr << "ERROR: fragment shader ÄÄÆÄÀÏ ½ÇÆĞ\n" << errorLog << std::endl;
-			return;
-		}
+		glGetShaderInfoLog(fragmentshader, 512, NULL, errorLog);
+		std::cerr << "ERROR: fragment shader ì»´íŒŒì¼ ì‹¤íŒ¨\n" << errorLog << std::endl;
+		return;
 	}
 
 }
 
 void InitShader()
 {
-	make_vertexShader(); //--- ¹öÅØ½º ¼¼ÀÌ´õ ¸¸µé±â
-	make_fragmentShader(); //--- ÇÁ·¡±×¸ÕÆ® ¼¼ÀÌ´õ ¸¸µé±â
+	make_vertexShader(); //--- ë²„í…ìŠ¤ ì„¸ì´ë” ë§Œë“¤ê¸°
+	make_fragmentShader(); //--- í”„ë˜ê·¸ë¨¼íŠ¸ ì„¸ì´ë” ë§Œë“¤ê¸°
 	//-- shader Program
 	s_program = glCreateProgram();
-	s_program_line = glCreateProgram();
 
-	glAttachShader(s_program, vertexshader[0]);
-	glAttachShader(s_program, fragmentshader[0]);
+	glAttachShader(s_program, vertexshader);
+	glAttachShader(s_program, fragmentshader);
 
-	glAttachShader(s_program_line, vertexshader[1]);
-	glAttachShader(s_program_line, fragmentshader[1]);
+	//--- ì„¸ì´ë” ì‚­ì œí•˜ê¸°
 
-	//--- ¼¼ÀÌ´õ »èÁ¦ÇÏ±â
-	for (int i = 0; i < 2; i++)
-	{
-		glDeleteShader(vertexshader[i]);
-		glDeleteShader(fragmentshader[i]);
-	}
+	glDeleteShader(vertexshader);
+	glDeleteShader(fragmentshader);
 
 	glLinkProgram(s_program);
 
-	// ---¼¼ÀÌ´õ°¡ Àß ¿¬°áµÇ¾ú´ÂÁö Ã¼Å©ÇÏ±â
+	// ---ì„¸ì´ë”ê°€ ì˜ ì—°ê²°ë˜ì—ˆëŠ”ì§€ ì²´í¬í•˜ê¸°
 	GLint result;
 	GLchar errorLog[512];
 	glGetProgramiv(s_program, GL_LINK_STATUS, &result);
 	if (!result) {
 		glGetProgramInfoLog(s_program, 512, NULL, errorLog);
-		std::cerr << "ERROR: shader program ¿¬°á ½ÇÆĞ\n" << errorLog << std::endl;
+		std::cerr << "ERROR: shader program ì—°ê²° ì‹¤íŒ¨\n" << errorLog << std::endl;
 		return;
 	}
-	glLinkProgram(s_program_line);
-	// ---¼¼ÀÌ´õ°¡ Àß ¿¬°áµÇ¾ú´ÂÁö Ã¼Å©ÇÏ±â
-	glGetProgramiv(s_program_line, GL_LINK_STATUS, &result);
-	if (!result) {
-		glGetProgramInfoLog(s_program_line, 512, NULL, errorLog);
-		std::cerr << "ERROR: shader program ¿¬°á ½ÇÆĞ\n" << errorLog << std::endl;
-		return;
-	}
-	//--- Shader Program »ç¿ëÇÏ±â
 }
 
 void InitBuffer()
 {
-	//----------------À°¸éÃ¼
-
-	obj objfile("cube_16.obj");
-	objfile.ReadObj();
+	//----------------ì› 
 	glGenVertexArrays(1, &vao);
-	glGenBuffers(2, vbo);
-	glGenBuffers(1, &ebo);
+	glGenBuffers(1, &vbo);
 	glBindVertexArray(vao);
 
-	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-	glBufferData(GL_ARRAY_BUFFER, objfile.vertexNum * 3 * sizeof(GLfloat), objfile.vertex, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, objfile.faceNum * 3 * sizeof(int), objfile.face_v, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, spotcount * 3 * sizeof(GLfloat), circle_vertex, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
 
-	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-	glBufferData(GL_ARRAY_BUFFER, 24 * sizeof(GLfloat), cubeColor, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
-	glEnableVertexAttribArray(1);
-
-	//----------------¿À¸éÃ¼
-	obj objfile_pyramid("pyramid_16.obj");
-	objfile_pyramid.ReadObj();
-	glGenVertexArrays(1, &vao_pyramid);
-	glGenBuffers(2, vbo_pyramid);
-	glGenBuffers(1, &ebo_pyramid);
-	glBindVertexArray(vao_pyramid);
+	obj objfile[3];
+	objfile[0].OpenFile("cube_18_1.obj");
+	objfile[1].OpenFile("cube_18_2.obj");
+	objfile[2].OpenFile("cube_18_3.obj");
 
 
 
-
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_pyramid[0]);
-	glBufferData(GL_ARRAY_BUFFER, objfile_pyramid.vertexNum * 3 * sizeof(GLfloat), objfile_pyramid.vertex, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_pyramid);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, objfile_pyramid.faceNum * 3 * sizeof(int), objfile_pyramid.face_v, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
-	glEnableVertexAttribArray(0);
-
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_pyramid[1]);
-	glBufferData(GL_ARRAY_BUFFER, 15 * sizeof(GLfloat), pyramidColor, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
-	glEnableVertexAttribArray(1);
-
-	glEnable(GL_DEPTH_TEST);
-
-}
-
-void circle_line_enter()
-{
-	circle_line[0].radius = 0.4f;
-	circle_line[0].radian = 0;
-
-}
-
-void draw_circle_line()
-{
-	for (int i = 0; i < 30; i++) {
-		circle_line[0].point[i][0] = circle_line[0].radius * cos(radians(circle_line[0].radian));
-		circle_line[0].point[i][1] = 0;
-		circle_line[0].point[i][2] = circle_line[0].radius * sin(radians(circle_line[0].radian));
-		circle_line[0].radian += 6;
-
+	for (int i = 0; i < 3; i++)
+	{
+		objfile[i].ReadObj();
 	}
 }
 
@@ -461,6 +379,21 @@ GLfloat LeftRightSideAnimTrans = 0;
 
 GLvoid TimerFunction(int value)
 {
+	if (value == 0)
+	{
+		for (int i = 0; i < 3; i++)
+		{
+			Smodel_index[i] = (Smodel_index[i] + i + 1) % (spotcount);
+			Smodel2_index[i] = (Smodel2_index[i] + i + 2) % (spotcount);
+		}
+
+		glutTimerFunc(10, TimerFunction, 0);
+	}
+	if (value == 1 && IsRotate != 0)
+	{
+		BigSphere_rotate += IsRotate * 0.5;
+		glutTimerFunc(10, TimerFunction, 1);
+	}
 	glutPostRedisplay();
 }
 
@@ -470,10 +403,83 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 {
 	switch (key)
 	{
+	case 'p':
+		isOrtho = true;
+		break;
+	case 'P':
+		isOrtho = false;
+		break;
+	case 'm':
+		gluQuadricDrawStyle(qobj, GLU_FILL); // ë„í˜• ìŠ¤íƒ€ì¼
+		break;
+	case'M':
+		gluQuadricDrawStyle(qobj, GLU_LINE); // ë„í˜• ìŠ¤íƒ€ì¼
+		break;
+	case 'w':
+		if (BigSphere_trans.y < 5.0f) BigSphere_trans.y += 0.5f;
+		break;
+	case 'a':
+		if (BigSphere_trans.x > -5.0f) BigSphere_trans.x -= 0.5f;
+		break;
+	case 's':
+		if (BigSphere_trans.y > -5.0f) BigSphere_trans.y -= 0.5f;
+		break;
+	case 'd':
+		if (BigSphere_trans.x < 5.0f) BigSphere_trans.x += 0.5f;
+		break;
+	case 'z':
+		if (BigSphere_trans.z < 5.0f) BigSphere_trans.z += 0.5f;
+		break;
+	case 'x':
+		if (BigSphere_trans.z > -20.0f) BigSphere_trans.z -= 0.5f;
+		break;
+	case 'y':
+		if (IsRotate == 1) IsRotate = 0;
+		else
+		{
+			if (IsRotate == 0) glutTimerFunc(10, TimerFunction, 1);
+			IsRotate = 1;
+		}
+		break;
+	case 'Y':
+		if (IsRotate == -1) IsRotate = 0;
+		else
+		{
+			if (IsRotate == 0) glutTimerFunc(10, TimerFunction, 1);
+			IsRotate = -1;
+		}
+
+		break;
 	case 'q':
 		glutDestroyWindow(windowID);
 		break;
 	}
 
 	glutPostRedisplay();
+}
+
+
+char* filetobuf(const char* file)
+{
+	FILE* fp;
+	long length;
+	char* buf;
+
+	fp = fopen(file, "rb");
+
+	if (!fp)
+		assert(fp != nullptr);
+
+	fseek(fp, 0, SEEK_END);
+	length = ftell(fp);
+	buf = (char*)malloc(sizeof(char) * length + 1);
+	fseek(fp, 0, SEEK_SET);
+	if (buf != nullptr)
+		fread(buf, 1, length + 1, fp);
+
+	fclose(fp);
+	if (buf != nullptr)
+		buf[length] = 0;
+
+	return buf;
 }

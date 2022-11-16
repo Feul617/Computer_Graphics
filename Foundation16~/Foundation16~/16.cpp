@@ -6,9 +6,9 @@
 #include <stdio.h>
 #include <random>
 #include <cassert>
-#include <glm/glm/glm.hpp>
-#include <glm/glm/ext.hpp>
-#include <glm/glm/gtc/matrix_transform.hpp>
+#include <gl/glm/glm/glm.hpp>
+#include <gl/glm/glm/ext.hpp>
+#include <gl/glm/glm/gtc/matrix_transform.hpp>
 #include "file.h"
 #include "objReader.h"
 #include <cmath>
