@@ -1,18 +1,7 @@
 ﻿#define _CRT_SECURE_NO_WARNINGS
-#include <iostream>
-#include <gl/glew.h>
-#include <gl/freeglut.h>
-#include <gl/freeglut_ext.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <random>
-#include <cassert>
-//#include <gl/glm/glm/glm.hpp>
-//#include <gl/glm/glm/ext.hpp>
-//#include <gl/glm/glm/gtc/matrix_transform.hpp>
-#include <glm/glm/glm.hpp>
-#include <glm/glm/ext.hpp>
-#include <glm/glm/gtc/matrix_transform.hpp>
+//#include <glm/glm/glm.hpp>
+//#include <glm/glm/ext.hpp>
+//#include <glm/glm/gtc/matrix_transform.hpp>
 #include "objReader.h"
 #include <cmath>
 

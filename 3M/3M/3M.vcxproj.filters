@@ -21,6 +21,15 @@
     <ClCompile Include="AFX.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="plat.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="cube.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="map.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Object Include="Cube.obj">
@@ -28,18 +37,21 @@
     </Object>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Vertex.glsl">
+    <None Include="Fragment.glsl">
       <Filter>리소스 파일</Filter>
     </None>
-    <None Include="Fragment.glsl">
+    <None Include="Vertex.glsl">
       <Filter>리소스 파일</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="file.h">
+    <ClInclude Include="AFX.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="AFX.h">
+    <ClInclude Include="cube.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="map.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

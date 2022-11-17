@@ -90,7 +90,7 @@
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalOptions>glew32.lib freeglut.lib %(AdditionalOptions)</AdditionalOptions>
     </Link>
@@ -141,7 +141,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AFX.cpp" />
+    <ClCompile Include="cube.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="map.cpp" />
+    <ClCompile Include="plat.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Object Include="Cube.obj">
@@ -154,7 +157,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AFX.h" />
-    <ClInclude Include="file.h" />
+    <ClInclude Include="cube.h" />
+    <ClInclude Include="map.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

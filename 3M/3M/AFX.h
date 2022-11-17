@@ -1,19 +1,22 @@
 #pragma once
 #include <iostream>
-#include <gl/glew.h>
-#include<gl/freeglut.h>
-#include <gl/freeglut_ext.h>
-#include "file.h"
 #include <random>
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
-//#include <gl/glm/glm/glm.hpp>
-//#include <gl/glm/glm/ext.hpp>
-//#include <gl/glm/glm/gtc/matrix_transform.hpp>
-#include <glm/glm/glm.hpp>
-#include <glm/glm/ext.hpp>
-#include <glm/glm/gtc/matrix_transform.hpp>
+
+#include <gl/glew.h>
+#include<gl/freeglut.h>
+#include <gl/freeglut_ext.h>
+#include <gl/glm/glm/glm.hpp>
+#include <gl/glm/glm/ext.hpp>
+#include <gl/glm/glm/gtc/matrix_transform.hpp>
+//#include <glm/glm/glm.hpp>
+//#include <glm/glm/ext.hpp>
+//#include <glglm/glm/gtc/matrix_transform.hpp>
+
+
+#define _CRT_SECURE_NO_WARNINGS
 
 using namespace glm;
 using namespace std;
@@ -44,28 +47,20 @@ typedef struct READ {
 }READ;
 
 //변수
-GLchar* vertexsource[2], * fragmentsource[2];
-GLuint vertexshader[2], fragmentshader[2], vao[3], vbo[3], ebo[1];
-GLuint s_program, s_program_floor, shaderID;
-GLfloat rColor = 1.f, bColor = 1.f, gColor = 1.f;
-GLint result;
-GLchar errorLog[512];
+extern GLuint vertexshader, fragmentshader;
+extern GLuint s_program, s_program_floor, shaderID;
+extern GLfloat rColor, bColor, gColor;
+extern GLint result;
+extern GLchar errorLog[512];
 
-READ cube;
-READ tetra;
+extern FILE* fp;
 
+extern vec3 plat[4];
 
 //함수
-GLvoid drawScene(GLvoid);
-GLvoid Reshape(int w, int h);
-
 void make_vertexShader();
 void make_fragmentShader();
-void InitBuffer();
-void InitShader();
 
 void ReadObj(FILE* objFile, READ& Read);
 
-void Keyboard(unsigned char key, int x, int y);
-
-
+char* filetobuf(const char* file);
