@@ -5,9 +5,12 @@
 #include <gl/glut.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <gl/glm/glm/glm.hpp>
-#include <gl/glm/glm/ext.hpp>
-#include <gl/glm/glm/gtc/matrix_transform.hpp>
+//#include <gl/glm/glm/glm.hpp>
+//#include <gl/glm/glm/ext.hpp>
+//#include <gl/glm/glm/gtc/matrix_transform.hpp>
+#include <gl/glm/glm.hpp>
+#include <gl/glm/ext.hpp>
+#include <gl/glm/gtc/matrix_transform.hpp>
 #include <random>
 
 #define WIDTH 800
@@ -75,7 +78,7 @@ float ySelfRot = 0.0f;
 float yZeroRot = 0.0f;
 float Viewz = 0.0f;
 
-bool Drop = true, What_view, M_on, V_on, rani, make_maze, first_pov;
+bool Drop = true, What_view, M_on, V_on, R_on, make_maze, first_pov;
 int Xcount = 0, Ycount = 0;
 float yz = 0.0f;
 glm::vec3 scale[25][25];
@@ -334,7 +337,7 @@ void TimerFunction(int value)
 			for (int i = 0; i < Ycount; i = i++) {
 				for (int k = 0; k < Xcount; k++) {
 
-					if (!rani || maze[i * Xcount + k]) {
+					if (!R_on || maze[i * Xcount + k]) {
 						if (Boxes[i * Xcount + k].Yplus == 1) {
 							Boxes[i * Xcount + k].scale[1] += Boxes[i * Xcount + k].Speed;
 							if (Boxes[i * Xcount + k].scale[1] >= Boxes[i * Xcount + k].Max_height)
@@ -353,12 +356,10 @@ void TimerFunction(int value)
 		else if (V_on) {
 			for (int i = 0; i < Ycount; i = i++) {
 				for (int k = 0; k < Xcount; k++) {
-					if (maze[i * Xcount + k]) {
-						if (Boxes[i * Xcount + k].scale[1] > 1)
-							Boxes[i * Xcount + k].scale[1] -= Boxes[i * Xcount + k].Speed;
-						else
-							Boxes[i * Xcount + k].scale[1] = 1;
-					}
+					if (Boxes[i * Xcount + k].scale[1] > 1)
+						Boxes[i * Xcount + k].scale[1] -= Boxes[i * Xcount + k].Speed;
+					else
+						Boxes[i * Xcount + k].scale[1] = 1;
 				}
 			}
 		}
@@ -390,6 +391,8 @@ void TimerFunction(int value)
 
 			cameraPos = TR * glm::vec4(0.0f, 3.0f, 0.0f, 1.0f);
 			cameraDirection = Rotate * glm::vec4(0.0f, 1.0f, -1.0f, 1.0f);
+
+			glEnable(GL_DEPTH_TEST);
 		}
 	}
 
@@ -424,8 +427,9 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 		cameraPos = glm::vec3(cameraPos.x, 0.0f, cameraPos.z);
 	}
 	else if (key == 'r') {
-		rani = rani ? false : true;
+		R_on = R_on ? false : true;
 		make_maze = true;
+		V_on = false;
 	}
 	else if (key == 'p') {
 		What_view = false;					// 원근 투영
@@ -505,9 +509,11 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 		cameraPos.y = 15.0f;
 		Camerax = 0;
 		Cameraz = 15.0f;
+		R_on = false;
 		V_on = false;
 		M_on = false;
-		What_view == false;
+		make_maze = false;
+		What_view = false;
 		yZeroRot = 0;
 
 		for (int i = 0; i < Ycount; i = i++) {
@@ -524,9 +530,25 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 	}
 	else if (key == '3') {
 		first_pov = false;
+
+		glm::mat4 TR = glm::mat4(1.0f);
+		glm::mat4 Tx = glm::mat4(1.0f);
+		glm::mat4 Scale = glm::mat4(1.0f);
+		glm::mat4 Rotate = glm::mat4(1.0f);
+
+		cameraPos1 = glm::vec3(Camerax, 0.0f, Cameraz);
+		cameraPos = glm::vec3(Camerax, 15.0f, Cameraz);
+		cameraDirection = glm::vec3(0.0f, 0.0f, -1.0f); //--- 카메라 바라보는 방향
+		cameraUp = glm::vec3(0.0f, 1.0f, 0.0f); //--- 카메라 위쪽 방향
+
+		
+		glViewport(600, 400, 200, 200);
+
 	}
+
 	else if (key == 'q')
 		glutLeaveMainLoop();
+
 	glutPostRedisplay();
 }
 
