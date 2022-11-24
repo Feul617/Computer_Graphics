@@ -39,6 +39,7 @@ typedef struct Player {
 	bool down_move;
 
 	float lotate;
+	float speed;
 
 	bool view;
 }Player;
@@ -76,7 +77,6 @@ float Cameraz = 15.0f;
 float Camerax = 0.0f;
 float ySelfRot = 0.0f;
 float yZeroRot = 0.0f;
-float Viewz = 0.0f;
 
 bool Drop = true, What_view, M_on, V_on, R_on, make_maze, first_pov;
 int Xcount = 0, Ycount = 0;
@@ -89,6 +89,7 @@ Cube* Boxes;
 Player player;
 float dropboard = 3.0, drop = 3.0;
 int mouse_start_pos;
+bool mouse_motion = true;
 
 GLUquadricObj* qobj = gluNewQuadric();
 
@@ -96,6 +97,11 @@ glm::vec3 cameraPos;
 glm::vec3 cameraPos1;
 glm::vec3 cameraDirection; //--- 카메라 바라보는 방향
 glm::vec3 cameraUp; //--- 카메라 위쪽 방향
+
+glm::vec3 minimap_cameraPos;
+glm::vec3 minimap_cameraPos1;
+glm::vec3 minimap_cameraDirection; //--- 카메라 바라보는 방향
+glm::vec3 minimap_cameraUp; //--- 카메라 위쪽 방향
 
 glm::vec3 originPos;
 
@@ -161,6 +167,11 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 	scanf("%d %d", &Xcount, &Ycount);
 	Boxinit(Xcount, Ycount);
 
+	minimap_cameraDirection = cameraDirection;
+	minimap_cameraPos = cameraPos;
+	minimap_cameraUp = cameraUp;
+	minimap_cameraPos1 = cameraPos1;
+
 	glewInit();
 	InitShader();
 	InitBuffer();
@@ -173,7 +184,6 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설정
 	glutEntryFunc(MouseEntry);
 	glutTimerFunc(30, TimerFunction, 1);
 	glutMainLoop();
-	player.left_move = false;
 }
 
 void make_vertexShader() 
@@ -283,7 +293,6 @@ void drawScene()
 		glm::mat4 projection = glm::mat4(1.0f);
 		projection = glm::perspective(glm::radians(60.0f), 1.0f, 0.01f, 100.0f);
 		projection = glm::rotate(projection, glm::radians(45.0f), glm::vec3(1.0, 0.0, 0.0)); //--- z축에 대하여 회전 행렬
-		projection = glm::translate(projection, glm::vec3(0.0, 0.0, Viewz)); //--- 공간을 약간 뒤로 미뤄줌
 		unsigned int projectionLocation = glGetUniformLocation(s_program, "projectionTransform"); //--- 투영 변환 값 설정
 		glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, &projection[0][0]);
 	}
@@ -296,19 +305,22 @@ void drawScene()
 
 	glm::mat4 view = glm::mat4(1.0f);
 
+	//view = glm::lookAt(minimap_cameraPos, minimap_cameraPos + minimap_cameraDirection, minimap_cameraUp);
 	view = glm::lookAt(cameraPos, cameraPos + cameraDirection, cameraUp);
 	unsigned int viewLocation = glGetUniformLocation(s_program, "viewTransform"); //--- 뷰잉 변환 설정
 	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, &view[0][0]);
 
 	Draw_filed();
-	glViewport(600, 400, 200, 200);
+	glViewport(550, 350, 300, 300);
 
+	view = glm::mat4(1.f);
 	glm::mat4 projection = glm::mat4(1.0f);
-	projection = glm::perspective(glm::radians(60.0f), 1.0f, 0.01f, 100.0f);
+	projection = glm::ortho(-15.0f, 15.0f, -15.0f, 15.0f, -15.0f, 15.0f);
 	projection = glm::rotate(projection, glm::radians(90.0f), glm::vec3(1.0, 0.0, 0.0)); //--- z축에 대하여 회전 행렬
-	projection = glm::translate(projection, glm::vec3(0.0, -3.0, 15.0)); //--- 공간을 약간 뒤로 미뤄줌
+	//projection = glm::translate(projection, glm::vec3(0.0, -3.0, 15.0)); //--- 공간을 약간 뒤로 미뤄줌
 	unsigned int projectionLocation = glGetUniformLocation(s_program, "projectionTransform"); //--- 투영 변환 값 설정
 	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, &projection[0][0]);
+	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, &view[0][0]);
 
 	Draw_filed();
 	glViewport(0, 0, 800, 600);
@@ -358,7 +370,9 @@ void TimerFunction(int value)
 				for (int k = 0; k < Xcount; k++) {
 					if (Boxes[i * Xcount + k].scale[1] > 1)
 						Boxes[i * Xcount + k].scale[1] -= Boxes[i * Xcount + k].Speed;
-					else
+					else if(Boxes[i * Xcount + k].scale[1] < -1.0)
+						Boxes[i * Xcount + k].scale[1] = -2;
+					else if (Boxes[i * Xcount + k].scale[1] <= 1 && Boxes[i * Xcount + k].scale[1] > 0)
 						Boxes[i * Xcount + k].scale[1] = 1;
 				}
 			}
@@ -392,28 +406,24 @@ void TimerFunction(int value)
 			cameraPos = TR * glm::vec4(0.0f, 3.0f, 0.0f, 1.0f);
 			cameraDirection = Rotate * glm::vec4(0.0f, 1.0f, -1.0f, 1.0f);
 
-			glEnable(GL_DEPTH_TEST);
 		}
 	}
 
 	if (player.left_move) {
-		player.Move[0] -= cos(glm::radians(player.lotate)) * 0.05;
-		player.Move[2] -= sin(glm::radians(player.lotate)) * 0.05;
-	}
-
-	if (player.right_move) {
-		player.Move[0] += cos(glm::radians(player.lotate)) * 0.1;
-		player.Move[2] += sin(glm::radians(player.lotate)) * 0.1;
-	}
-
-	if (player.up_move) {
-		player.Move[0] -= sin(glm::radians(player.lotate)) * 0.1;
-		player.Move[2] -= cos(glm::radians(player.lotate)) * 0.1;
-	}
-
-	if (player.down_move) {
-		player.Move[0] += sin(glm::radians(player.lotate)) * 0.1;
-		player.Move[2] += cos(glm::radians(player.lotate)) * 0.1;
+		player.Move[0] -= cos(glm::radians(player.lotate)) * player.speed;
+		player.Move[2] += sin(glm::radians(player.lotate)) * player.speed;
+	}														 													 
+	if (player.right_move) {								
+		player.Move[0] += cos(glm::radians(player.lotate)) * player.speed;
+		player.Move[2] -= sin(glm::radians(player.lotate)) * player.speed;
+	}														 
+	if (player.up_move) {									 
+		player.Move[0] -= sin(glm::radians(player.lotate)) * player.speed;
+		player.Move[2] -= cos(glm::radians(player.lotate)) * player.speed;
+	}														 
+	if (player.down_move) {									 
+		player.Move[0] += sin(glm::radians(player.lotate)) * player.speed;
+		player.Move[2] += cos(glm::radians(player.lotate)) * player.speed;
 	}
 
 	glutTimerFunc(50, TimerFunction, 1);
@@ -426,32 +436,18 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 		What_view = true;					 // 직각 투영
 		cameraPos = glm::vec3(cameraPos.x, 0.0f, cameraPos.z);
 	}
-	else if (key == 'r') {
-		R_on = R_on ? false : true;
-		make_maze = true;
-		V_on = false;
-	}
 	else if (key == 'p') {
 		What_view = false;					// 원근 투영
 		cameraPos = glm::vec3(cameraPos.x, 15.0f, cameraPos.z);
 		cameraDirection = cameraDirection;
 	}
-	else if (key == 'z') {
-		if (What_view == false) {
-			//Cameraz -= 0.1;					// 원근 투영일시 Camerz 줄이기
-			//cameraPos = glm::vec3(Camerax, 15.0f, Cameraz);
-			//cameraPos1 = glm::vec3(Camerax, 0.0f, Cameraz);
-			Viewz -= 0.1;
-		}
+	else if (key == 'r') {
+		R_on = R_on ? false : true;
+		make_maze = true;
+		V_on = false;
 	}
-	else if (key == 'Z') {
-		if (What_view == false) {
-			//Cameraz += 0.1;					// 원근 투영일시 Camerz 늘리기
-			//cameraPos = glm::vec3(Camerax, 15.0f, Cameraz);
-			//cameraPos1 = glm::vec3(Camerax, 0.0f, Cameraz);
-			Viewz += 0.1;
-		}
-	}
+
+
 	else if (key == 'm') {
 		M_on = M_on ? false : true;			// 사각형 오르락내리락 애니메이션 출력
 		V_on = false;
@@ -541,9 +537,20 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 		cameraDirection = glm::vec3(0.0f, 0.0f, -1.0f); //--- 카메라 바라보는 방향
 		cameraUp = glm::vec3(0.0f, 1.0f, 0.0f); //--- 카메라 위쪽 방향
 
-		
-		glViewport(600, 400, 200, 200);
+	}
 
+	else if (key == '+') {
+		if(player.speed <= 1.5f)
+			player.speed += 0.01f;
+	}
+
+	else if (key == '-') {
+		if(player.speed >= 0)
+			player.speed -= 0.01f;
+	}
+
+	else if (key == 'f') {
+		mouse_motion = !mouse_motion;
 	}
 
 	else if (key == 'q')
@@ -588,14 +595,18 @@ void SpecialUpKeyboard(int key, int x, int y) {
 
 void MouseMotion(int x, int y)
 {
-	player.lotate -= (float)(x - mouse_start_pos) / 2;
-	mouse_start_pos = x;
+	if (mouse_motion) {
+		player.lotate -= (float)(x - mouse_start_pos) / 2;
+		mouse_start_pos = x;
+	}
 }
 
 void MouseEntry(int state)
 {
-	if (state == GLUT_LEFT) {
-		glutWarpPointer(WIDTH / 2, HEIGHT / 2);
+	if (mouse_motion) {
+		if (state == GLUT_LEFT) {
+			glutWarpPointer(WIDTH / 2, HEIGHT / 2);
+		}
 	}
 }
 
@@ -756,7 +767,8 @@ void Playerinit()
 	player.Player_Color = { 1.0, 0.0, 0.0 };
 	player.Player_locate = Boxes[Xcount + 1].locate;
 	player.Player_scale = { 0.2, 0.2, 0.2 };
-	player.lotate = 0;
+	player.lotate = 180;
+	player.speed = 0.05f;
 }
 
 void Print_Menu()
@@ -768,6 +780,7 @@ void Print_Menu()
 	printf("r: 미로를 제작한다\n");
 	printf("v: 육면체들 움직임이 멈추고 낮은 높이로 변한다\n");
 	printf("1/3: 카메라 시점 1인칭/3인칭 변환\n");
+	printf("f: 화면을 고정할 수 있다(마우스 창 밖으로 이동, 캐릭터 시점 변환 X)");
 	printf("q: 프로그램 종료\n");
 }
 
